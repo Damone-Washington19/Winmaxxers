@@ -101,149 +101,113 @@ def build_temporal_features(df):
             "year"
         ).copy()
 
-        # -------------------------
-        # Previous Year Features
-        # -------------------------
+        # ---------------------------------
+        # Previous values
+        # ---------------------------------
 
-        group[
-            "prev_pagerank"
-        ] = group[
-            "pagerank"
-        ].shift(1)
-
-        group[
-            "prev_degree"
-        ] = group[
-            "total_degree"
-        ].shift(1)
-
-        group[
-            "prev_authority"
-        ] = group[
-            "authority_score"
-        ].shift(1)
-
-        group[
-            "prev_betweenness"
-        ] = group[
-            "betweenness_centrality"
-        ].shift(1)
-
-        # -------------------------
-        # Growth Features
-        # -------------------------
-
-        group[
-            "pagerank_growth_1y"
-        ] = safe_growth(
-            group["pagerank"],
-            group["prev_pagerank"]
+        group["prev_pagerank"] = (
+            group["pagerank"].shift(1)
         )
 
-        group[
-            "degree_growth_1y"
-        ] = safe_growth(
-            group["total_degree"],
-            group["prev_degree"]
+        group["prev_degree"] = (
+            group["total_degree"].shift(1)
         )
 
-        group[
-            "authority_growth_1y"
-        ] = safe_growth(
-            group["authority_score"],
-            group["prev_authority"]
+        group["prev_authority"] = (
+            group["authority_score"].shift(1)
         )
 
-        group[
-            "betweenness_growth_1y"
-        ] = safe_growth(
-            group[
-                "betweenness_centrality"
-            ],
-            group[
-                "prev_betweenness"
-            ]
+        group["prev_betweenness"] = (
+            group["betweenness_centrality"].shift(1)
         )
 
-        # -------------------------
-        # Two-Year Growth
-        # -------------------------
+        # ---------------------------------
+        # 1 Year Log Growth
+        # ---------------------------------
 
-        pr_2y_prev = (
-            group["pagerank"]
-            .shift(2)
+        group["pagerank_growth_1y"] = (
+            np.log1p(group["pagerank"])
+            -
+            np.log1p(group["prev_pagerank"])
         )
 
-        deg_2y_prev = (
-            group["total_degree"]
-            .shift(2)
+        group["degree_growth_1y"] = (
+            np.log1p(group["total_degree"])
+            -
+            np.log1p(group["prev_degree"])
         )
 
-        group[
-            "pagerank_growth_2y"
-        ] = safe_growth(
-            group["pagerank"],
-            pr_2y_prev
+        group["authority_growth_1y"] = (
+            np.log1p(group["authority_score"])
+            -
+            np.log1p(group["prev_authority"])
         )
 
-        group[
-            "degree_growth_2y"
-        ] = safe_growth(
-            group["total_degree"],
-            deg_2y_prev
+        group["betweenness_growth_1y"] = (
+            np.log1p(group["betweenness_centrality"])
+            -
+            np.log1p(group["prev_betweenness"])
         )
 
-        # -------------------------
+        # ---------------------------------
+        # 2 Year Growth
+        # ---------------------------------
+
+        pr_2y = (
+            group["pagerank"].shift(2)
+        )
+
+        deg_2y = (
+            group["total_degree"].shift(2)
+        )
+
+        group["pagerank_growth_2y"] = (
+            np.log1p(group["pagerank"])
+            -
+            np.log1p(pr_2y)
+        )
+
+        group["degree_growth_2y"] = (
+            np.log1p(group["total_degree"])
+            -
+            np.log1p(deg_2y)
+        )
+
+        # ---------------------------------
         # Momentum
-        # -------------------------
+        # ---------------------------------
 
-        group[
-            "pagerank_momentum"
-        ] = (
+        group["pagerank_momentum"] = (
             group["pagerank"]
             -
-            pr_2y_prev
+            pr_2y
         )
 
-        group[
-            "degree_momentum"
-        ] = (
+        group["degree_momentum"] = (
             group["total_degree"]
             -
-            deg_2y_prev
+            deg_2y
         )
 
-        # -------------------------
+        # ---------------------------------
         # Acceleration
-        # -------------------------
+        # ---------------------------------
 
-        group[
-            "pagerank_acceleration"
-        ] = (
-            group[
-                "pagerank_growth_1y"
-            ]
+        group["pagerank_acceleration"] = (
+            group["pagerank_growth_1y"]
             -
-            group[
-                "pagerank_growth_1y"
-            ].shift(1)
+            group["pagerank_growth_1y"].shift(1)
         )
 
-        group[
-            "degree_acceleration"
-        ] = (
-            group[
-                "degree_growth_1y"
-            ]
+        group["degree_acceleration"] = (
+            group["degree_growth_1y"]
             -
-            group[
-                "degree_growth_1y"
-            ].shift(1)
+            group["degree_growth_1y"].shift(1)
         )
 
-        # -------------------------
-        # Future Label
-        # -------------------------
+        # ---------------------------------
+        # Future Target
+        # ---------------------------------
 
         future_pr = (
             group["pagerank"]
@@ -252,9 +216,10 @@ def build_temporal_features(df):
 
         group[
             "future_pagerank_growth"
-        ] = safe_growth(
-            future_pr,
-            group["pagerank"]
+        ] = (
+            np.log1p(future_pr)
+            -
+            np.log1p(group["pagerank"])
         )
 
         grouped.append(group)
@@ -264,21 +229,15 @@ def build_temporal_features(df):
         ignore_index=True
     )
 
-    # remove rows without
-    # enough history
+    # Keep rows with enough history.
+    # DO NOT require future target.
 
     final_df = final_df.dropna(
         subset=[
-
             "pagerank_growth_1y",
-
             "degree_growth_1y",
-
             "authority_growth_1y",
-
-            "betweenness_growth_1y",
-
-            "future_pagerank_growth"
+            "betweenness_growth_1y"
         ]
     )
 
