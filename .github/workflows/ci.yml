@@ -1,0 +1,30 @@
+name: Python Hackathon Pipeline Validation
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-python-version: '3.10'
+        
+    - name: Install System and Project Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests pandas networkx scikit-learn streamlit pyvis
+        
+    - name: Verify Code Compilation
+      run: |
+        python -m py_compile src/graph_engine.py
+        python -m py_compile src/predictor.py
+        python -m py_compile app/app.py
