@@ -580,7 +580,6 @@ Nanotechnology education,ACS Nano
 Nanotechnology education,Institut d'électronique de microélectronique et de nanotechnologie
 Nanotechnology education,Minatec
 Nanotechnology education,Nanosensor
-Nanotechnology education,Nanotechnology education
 Nanotechnology education,National Nanotechnology Initiative
 Nanotechnology education,Nile University
 Nanotechnology education,Scanning tunneling microscope
@@ -686,7 +685,6 @@ Surface plasmon resonance,Spreeta
 Surface plasmon resonance,Surface plasmon polariton
 Synthetic ion channels,Nanotechnology
 Synthetic ion channels,Supramolecular chemistry
-Synthetic ion channels,Synthetic ion channels
 Synthetic molecular motor,Molecular machine
 Synthetic molecular motor,Molecular propeller
 Synthetic molecular motor,Nanomotor
@@ -1228,7 +1226,6 @@ Maskless lithography,Proton beam writing
 Maskless lithography,Rusnano
 Micralign,Aligner (semiconductor)
 Micralign,Microlithography
-Microcontact printing,Microcontact printing
 Microcontact printing,PDMS stamp
 Microcontact printing,Photoresist
 Microcontact printing,Surface micromachining
@@ -1321,7 +1318,6 @@ Stepper,Aligner (semiconductor)
 Stepper,Extreme ultraviolet lithography
 Stepper,Micralign
 Stepper,Photolithography
-Stepper,Stepper
 Virtual metrology,Chemical vapor deposition
 X-ray lithography,Extreme ultraviolet lithography
 X-ray lithography,LIGA
@@ -1367,7 +1363,6 @@ Molecular processor,Organic semiconductor
 NOMFET,Organic field-effect transistor
 OLED,AMOLED
 OLED,Flexible organic light-emitting diode
-OLED,OLED
 OLED,PEDOT-TMA
 OLED,Phosphorescent organic light-emitting diode
 OLED,Quantum dot display
@@ -1473,7 +1468,6 @@ Conductance quantum,Quantum point contact
 Conductance quantum,Quantum wire
 Conductance quantum,Thermal conductance quantum
 Coulomb blockade,Cooper pair
-Coulomb blockade,Coulomb blockade
 Coulomb blockade,Niemeyer–Dolan technique
 Coulomb blockade,Single-electron transistor
 Coulomb blockade,Superconductivity
@@ -1958,7 +1952,6 @@ Quantum dot solar cell,Cadmium telluride photovoltaics
 Quantum dot solar cell,Nanocrystalline silicon
 Quantum dot solar cell,Nanoparticle
 Quantum electrodynamics,Positronium
-Quantum electrodynamics,Quantum electrodynamics
 Quantum electrodynamics,Richard Feynman
 Quantum flux parametron,Rapid single flux quantum
 Quantum flux parametron,Superconductivity
@@ -2108,7 +2101,6 @@ Crystal engineering,Scanning probe microscopy
 Crystal engineering,Scanning tunneling microscope
 Crystal engineering,Self-assembly
 Crystal engineering,Supramolecular chemistry
-Dendrimer,Dendrimer
 Dendrimer,Ferrocene-containing dendrimers
 Dendrimer,Metallodendrimer
 Dendrimer,Nanotoxicology
@@ -2906,11 +2898,9 @@ Characterization of nanoparticles,National Nanotechnology Initiative
 Characterization of nanoparticles,Near-field scanning optical microscope
 Characterization of nanoparticles,Ultrafine particle
 Decahedral nanoparticle,Fiveling
-Extended Wulff constructions,Extended Wulff constructions
 Extended Wulff constructions,Fiveling
 Extended Wulff constructions,Icosahedral twins
 Fiveling,Extended Wulff constructions
-Fiveling,Fiveling
 Fiveling,Icosahedral twins
 Fiveling,Island growth
 Fiveling,Lennard-Jones potential
@@ -2922,7 +2912,6 @@ Icosahedral twin,Icosahedral twins
 Icosahedral twins,Cluster (physics)
 Icosahedral twins,Extended Wulff constructions
 Icosahedral twins,Fiveling
-Icosahedral twins,Icosahedral twins
 Icosahedral twins,Lennard-Jones potential
 Icosahedral twins,Pulickel Ajayan
 Modified Wulff construction,Extended Wulff constructions
@@ -2987,7 +2976,6 @@ Graphene,Atomic force microscopy
 Graphene,Carbon (journal)
 Graphene,Epitaxy
 Graphene,Graphane
-Graphene,Graphene
 Graphene,Hydrophobe
 Graphene,Konstantin Novoselov
 Graphene,Mildred Dresselhaus
@@ -3064,7 +3052,6 @@ Michael Coey,Spintronics
 Dresselhaus effect,Rashba effect
 Dresselhaus effect,Spin–orbit interaction
 Electron,Cooper pair
-Electron,Electron
 Electron,Electron-beam lithography
 Electron,Pauli exclusion principle
 Electron,Positronium
@@ -3101,7 +3088,6 @@ Magnetoresistive RAM,Spin-transfer torque
 Magnetoresistive RAM,Tunnel magnetoresistance
 Nitrogen-vacancy center,Germanium-vacancy center in diamond
 Nitrogen-vacancy center,Nature Nanotechnology
-Nitrogen-vacancy center,Nitrogen-vacancy center
 Nitrogen-vacancy center,Scanning thermal microscopy
 Nitrogen-vacancy center,Silicon-vacancy center in diamond
 Stuart Parkin,Magnetoresistive RAM
@@ -3208,7 +3194,6 @@ Intermolecular force,Force field (chemistry)
 Intermolecular force,Hamaker theory
 Intermolecular force,Hydrogen bond
 Intermolecular force,Hydrophobic effect
-Intermolecular force,Intermolecular force
 Intermolecular force,Ionic bonding
 Intermolecular force,Lennard-Jones potential
 Intermolecular force,London dispersion force

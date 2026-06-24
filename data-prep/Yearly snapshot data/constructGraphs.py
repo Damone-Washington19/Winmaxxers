@@ -8,21 +8,49 @@ import community as community_louvain
 
 YEARS = [2020, 2021, 2022, 2023, 2024, 2025, 2026]
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+
+MASTER_FILE = SCRIPT_DIR / "master_pages.json"
+
+
+def load_master_titles():
+    with open(MASTER_FILE, "r", encoding="utf-8") as f:
+        master_data = json.load(f)
+
+    return {
+        page_info["title"]
+        for page_info in master_data.values()
+        if "title" in page_info
+    }
+
 
 def build_graph(snapshot_file):
 
     with open(snapshot_file, "r", encoding="utf-8") as f:
         pages = json.load(f)
 
-    master_titles = {
-        page["title"]
+    master_titles = load_master_titles()
+
+    filtered_pages = [
+        page
         for page in pages
+        if page["title"] in master_titles
+    ]
+
+    filtered_titles = {
+        page["title"]
+        for page in filtered_pages
     }
+
+    if len(filtered_pages) != len(pages):
+        print(
+            f"Filtered {len(pages) - len(filtered_pages)} pages not in master_pages.json"
+        )
 
     G = nx.DiGraph()
 
     # Add nodes
-    for page in pages:
+    for page in filtered_pages:
         G.add_node(
             page["title"],
             page_id=page["page_id"]
@@ -31,19 +59,22 @@ def build_graph(snapshot_file):
     edges = []
 
     # Add edges
-    for page in pages:
+    for page in filtered_pages:
 
         source = page["title"]
 
-        for target in page["links"]:
+        for target in page.get("links", []):
 
-            if target not in master_titles:
+            if target == source:
+                continue
+
+            if target not in filtered_titles:
                 continue
 
             G.add_edge(source, target)
             edges.append((source, target))
 
-    return G, pages, edges
+    return G, filtered_pages, edges
 
 
 def save_nodes(pages, year):
@@ -57,7 +88,7 @@ def save_nodes(pages, year):
         })
 
     pd.DataFrame(rows).to_csv(
-        f"{year}_nodes.csv",
+        SCRIPT_DIR / f"{year}_nodes.csv",
         index=False
     )
 
@@ -68,7 +99,7 @@ def save_edges(edges, year):
         edges,
         columns=["source", "target"]
     ).to_csv(
-        f"{year}_edges.csv",
+        SCRIPT_DIR / f"{year}_edges.csv",
         index=False
     )
 
@@ -137,7 +168,7 @@ def generate_features(G, pages, year):
     df = pd.DataFrame(rows)
 
     df.to_csv(
-        f"{year}_features.csv",
+        SCRIPT_DIR / f"{year}_features.csv",
         index=False
     )
 
@@ -148,9 +179,9 @@ def generate_features(G, pages, year):
 
 def process_year(year):
 
-    snapshot = f"{year}.json"
+    snapshot = SCRIPT_DIR / f"{year}.json"
 
-    if not Path(snapshot).exists():
+    if not snapshot.exists():
         print(f"Missing {snapshot}")
         return
 
