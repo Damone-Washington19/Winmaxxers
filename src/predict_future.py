@@ -1,46 +1,29 @@
 import pandas as pd
-from xgboost import XGBRegressor
+from utils import load_data, add_features, get_feature_columns
+from train_model import train_regression_model
 
-# Load data
-url = "https://raw.githubusercontent.com/Damone-Washington19/Winmaxxers/main/data-prep/Features/years_features.csv"
-data = pd.read_csv(url)
+def predict_next_year():
+    model, feature_cols, df, df_target = train_regression_model()
 
-# Sort and create next-year label
-data = data.sort_values(["page_id", "year"])
-data["pagerank_next_year"] = data.groupby("page_id")["pagerank"].shift(-1)
+    latest_year = df_target["year"].max()
+    df_current = df[df["year"] == latest_year].copy()
 
-# Feature list
-feature_cols = [
-    "in_degree", "out_degree", "total_degree", "pagerank",
-    "betweenness_centrality", "closeness_centrality",
-    "eigenvector_centrality", "katz_centrality",
-    "hub_score", "authority_score", "clustering_coefficient",
-    "core_number", "avg_neighbor_degree", "avg_neighbor_pagerank",
-    "community_size", "bridging_score"
-]
+    df_sorted = df.sort_values(["page_id", "year"]).copy()
+    df_sorted["pagerank_lag_1"] = df_sorted.groupby("page_id")["pagerank"].shift(1)
+    df_sorted["pagerank_lag_2"] = df_sorted.groupby("page_id")["pagerank"].shift(2)
 
-# Train on all years except 2026
-train = data[data["year"] <= 2025].dropna(subset=["pagerank_next_year"])
-X_train = train[feature_cols]
-y_train = train["pagerank_next_year"]
+    df_current = df_current.merge(
+        df_sorted[["page_id", "year", "pagerank_lag_1", "pagerank_lag_2"]],
+        on=["page_id", "year"],
+        how="left"
+    ).dropna(subset=["pagerank_lag_1", "pagerank_lag_2"])
 
-# Predict 2027 from 2026 features
-future = data[data["year"] == 2026]
-X_future = future[feature_cols]
+    X_curr = df_current[feature_cols].values
+    df_current["predicted_growth"] = model.predict(X_curr)
+    df_current["predicted_pagerank_next"] = df_current["pagerank"] * (1 + df_current["predicted_growth"])
 
-model = XGBRegressor(
-    n_estimators=500,
-    learning_rate=0.05,
-    max_depth=6,
-    subsample=0.8,
-    colsample_bytree=0.8,
-    random_state=42,
-)
-model.fit(X_train, y_train)
+    return df_current
 
-future["predicted_2027_pagerank"] = model.predict(X_future)
-
-# Sort by predicted importance
-future = future.sort_values("predicted_2027_pagerank", ascending=False)
-
-print(future[["page_id", "title", "predicted_2027_pagerank"]].head(20))
+if __name__ == "__main__":
+    preds = predict_next_year()
+    print(preds.head())
