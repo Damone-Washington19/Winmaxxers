@@ -1,52 +1,45 @@
-import pandas as pd
 from xgboost import XGBRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+import numpy as np
+from utils import load_data, add_features, clip_growth, get_feature_columns, build_folds, baseline_metrics
 
-# Load combined dataset from GitHub
-url = "https://raw.githubusercontent.com/Damone-Washington19/Winmaxxers/main/data-prep/Features/years_features.csv"
-data = pd.read_csv(url)
+def train_regression_model():
+    df = load_data()
+    df, df_target = add_features(df)
+    df_target = clip_growth(df_target)
 
-# Sort and create next-year label
-data = data.sort_values(["page_id", "year"])
-data["pagerank_next_year"] = data.groupby("page_id")["pagerank"].shift(-1)
+    target_col = "pagerank_growth_clipped"
+    feature_cols = get_feature_columns(df_target)
+    folds = build_folds(df_target)
 
-# Feature list
-feature_cols = [
-    "in_degree", "out_degree", "total_degree", "pagerank",
-    "betweenness_centrality", "closeness_centrality",
-    "eigenvector_centrality", "katz_centrality",
-    "hub_score", "authority_score", "clustering_coefficient",
-    "core_number", "avg_neighbor_degree", "avg_neighbor_pagerank",
-    "community_size", "bridging_score"
-]
+    best_model = None
+    best_mae = float("inf")
+    best_params = {"n_estimators": 200, "max_depth": 4, "learning_rate": 0.1}
 
-# Training data (up to 2024)
-train = data[data["year"] <= 2024].dropna(subset=["pagerank_next_year"])
-test  = data[data["year"] == 2025].dropna(subset=["pagerank_next_year"])
+    for y, train_mask, test_mask in folds:
+        train = df_target.loc[train_mask]
+        test = df_target.loc[test_mask]
 
-X_train = train[feature_cols]
-y_train = train["pagerank_next_year"]
+        X_train = train[feature_cols].values
+        y_train = train[target_col].values
+        X_test = test[feature_cols].values
+        y_test = test[target_col].values
 
-X_test = test[feature_cols]
-y_test = test["pagerank_next_year"]
+        model = XGBRegressor(
+            random_state=42,
+            objective="reg:squarederror",
+            **best_params
+        )
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
 
-# Train model
-model = XGBRegressor(
-    n_estimators=500,
-    learning_rate=0.05,
-    max_depth=6,
-    subsample=0.8,
-    colsample_bytree=0.8,
-    random_state=42,
-)
-model.fit(X_train, y_train)
+        mae = mean_absolute_error(y_test, y_pred)
+        if mae < best_mae:
+            best_mae = mae
+            best_model = model
 
-# Evaluate
-y_pred = model.predict(X_test)
-mae = mean_absolute_error(y_test, y_pred)
-rmse = mean_squared_error(y_test, y_pred) ** 0.5
-r2 = r2_score(y_test, y_pred)
+    return best_model, feature_cols, df, df_target
 
-print("MAE:", mae)
-print("RMSE:", rmse)
-print("R²:", r2)
+if __name__ == "__main__":
+    model, feature_cols, df, df_target = train_regression_model()
+    print("Model trained successfully.")
