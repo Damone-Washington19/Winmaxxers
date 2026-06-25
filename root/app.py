@@ -6,17 +6,19 @@ import streamlit.components.v1 as components
 import time
 
 # --- Page Configuration ---
-st.set_page_config(page_title="NanoTrend Vanguard", layout="wide")
+st.set_page_config(page_title="NanoTrend Vanguard Portal", layout="wide")
 
-# --- Interactive Explanation Layer ---
+# --- Sidebar: Confidence & Explanations ---
 with st.sidebar:
     st.title("🛡️ Model Confidence")
+    # Accuracy values from Source [1]
     st.metric("Global Accuracy (R²)", "0.97", help="How well the AI matches historical trends.")
-    st.metric("Avg. Error (MAE)", "0.11", help="Lower is better. This measures the 'noise' in predictions.")
+    st.metric("Avg. Error (MAE)", "0.11", help="This measures the 'noise' in predictions.")
     
     st.divider()
     
-    style = st.radio("Explanation Style", ["Middle School", "Professional", "Technical"])
+    st.subheader("Explanation Style")
+    style = st.radio("Choose a level:", ["Middle School", "Professional", "Technical"])
     
     if style == "Middle School":
         st.info("**The Popularity Contest:** We track who's making new friends on Wikipedia to guess who will be a superstar next year!")
@@ -25,73 +27,77 @@ with st.sidebar:
     else:
         st.info("**Recursive XGBoost:** Regressing on lagged graph centralities (PageRank, Betweenness) to predict temporal growth deltas.")
 
-# --- Title & Description ---
+# --- Title ---
 st.title("🔬 Nanotechnology Knowledge Graph Engine")
-st.markdown("""
-Move the slider to see how nanotechnology topics have evolved from **2020** and where they are headed by **2031**.
-*Nodes grow based on prestige (PageRank). Glowing red nodes are predicted 'Breakouts'.*
-""")
+st.markdown("Explore the evolution of nanotechnology from **2020** through predicted breakthroughs in **2031**.")
 
-# --- Data Loading (Simulated for this step) ---
-# In Step 3, we will generate the actual 'forecast_results.csv' from your features.
+# --- Step 4 Integration: Loading Real Data ---
 @st.cache_data
-def load_forecast_data():
-    # This is a placeholder structure to ensure the UI renders immediately
-    # We will replace this with your real recursive_forecast output next.
-    return pd.read_csv("data/forecast_results.csv") if False else None
+def load_real_data():
+    try:
+        df = pd.read_csv("data/forecast_results.csv")
+        return df
+    except Exception as e:
+        st.error(f"Error loading data: {e}. Please ensure Step 3 was completed successfully.")
+        return None
 
-# --- Timeline & Playback Control ---
-col_slider, col_play = st.columns([1, 2])
-if 'year_index' not in st.session_state:
-    st.session_state.year_index = 0
+df_full = load_real_data()
 
-years = list(range(2020, 2032))
-selected_year = col_slider.select_slider("Select Year", options=years, value=years[st.session_state.year_index])
-
-if col_play.button("▶ Play Evolution"):
-    for i in range(len(years)):
-        st.session_state.year_index = i
-        st.rerun()
-        time.sleep(0.5)
-
-# --- Visualization Logic ---
-st.subheader(f"🌐 Scientific Landscape: {selected_year}")
-
-# Sidebar Breakdown for "Why?"
-with st.expander("🔍 Why is the model predicting growth?"):
-    st.write("The AI looks for 'Bridges'—topics that connect two different scientific fields.")
-
-# Build the Network Graph
-# Based on Source [3], we limit to top nodes for performance.
-net = Network(height="600px", width="100%", bgcolor="#0e1117", font_color="white")
-
-# Placeholder nodes based on known breakout topics [4]
-# We'll use the top PageRank nodes from your 2026 data [5]
-top_topics = [
-    ("Nanotechnology", 0.03, False),
-    ("Dichroic prism", 0.001, True),
-    ("Carbon nanotube", 0.007, False),
-    ("Germanium-vacancy center", 0.001, True),
-    ("Quantum dot display", 0.002, True)
-]
-
-for title, pr, is_breakout in top_topics:
-    # Size scales with PageRank [6]
-    size = pr * 5000 if not is_breakout else pr * 8000 
-    color = "#ff4b4b" if is_breakout else "#00f0ff"
-    border = "2px solid yellow" if is_breakout else ""
+if df_full is not None:
+    # --- Timeline & Playback Control ---
+    years = sorted(df_full['year'].unique())
     
-    net.add_node(title, label=title, size=size, color=color, 
-                 title=f"PageRank: {pr:.4f}\nStatus: {'🚀 Breakout' if is_breakout else 'Stable'}")
+    if 'year_index' not in st.session_state:
+        st.session_state.year_index = 0
 
-# Structural visualization edges [6]
-net.add_edge("Nanotechnology", "Carbon nanotube")
-net.add_edge("Nanotechnology", "Quantum dot display")
-net.add_edge("Quantum dot display", "Dichroic prism")
+    col_slider, col_play = st.columns([2, 3])
+    selected_year = col_slider.select_slider("Select Year", options=years, value=years[st.session_state.year_index])
 
-# Render Graph
-net.save_graph("temp_graph.html")
-HtmlFile = open("temp_graph.html", 'r', encoding='utf-8')
-components.html(HtmlFile.read(), height=620)
+    if col_play.button("▶ Play Evolution"):
+        for i in range(len(years)):
+            st.session_state.year_index = i
+            st.rerun()
+            time.sleep(0.4)
 
-st.success(f"Model is currently showing {selected_year} projections with an R² of 0.97.")
+    # --- Filtering Logic ---
+    # We focus on top nodes for UI performance [4]
+    df_year = df_full[df_full['year'] == selected_year].copy()
+    
+    # --- UI Feature: Hover Information ---
+    with st.expander("🔍 Top Projected Growth Topics for " + str(selected_year)):
+        growth_display = df_year.sort_values('pagerank', ascending=False).head(5)
+        st.table(growth_display[['title', 'pagerank', 'uncertainty']])
+
+    # --- Graph Visualization (Pyvis) ---
+    net = Network(height="600px", width="100%", bgcolor="#0e1117", font_color="white")
+
+    for _, row in df_year.iterrows():
+        # Size nodes by PageRank (Prestige) [5, 6]
+        size = row['pagerank'] * 10000 
+        
+        # Color logic: Red for breakouts, Blue for established topics
+        # Sources identified "Dichroic prism" and "Quantum dot display" as breakouts [7]
+        color = "#ff4b4b" if row['is_breakout'] else "#00f0ff"
+        
+        # Add node with metadata for tooltips
+        label = row['title']
+        status = "🚀 BREAKOUT" if row['is_breakout'] else "Stable"
+        tooltip = f"Prestige (PageRank): {row['pagerank']:.4f}\nStatus: {status}\nModel Uncertainty: {row['uncertainty']:.2f}"
+        
+        net.add_node(label, label=label, size=size, color=color, title=tooltip)
+
+    # Simplified connections for visualization
+    nodes = df_year['title'].tolist()
+    for i in range(len(nodes)-1):
+        if i % 3 == 0: # Create a "web" appearance rather than a single line
+            net.add_edge(nodes[i], nodes[min(i+3, len(nodes)-1)])
+
+    # Render
+    net.save_graph("temp_graph.html")
+    with open("temp_graph.html", 'r', encoding='utf-8') as f:
+        components.html(f.read(), height=620)
+    
+    st.success(f"Displaying {selected_year} Scientific Landscape. Model R²: 0.97.")
+
+else:
+    st.warning("Waiting for forecast_results.csv to be generated in the /data folder...")
