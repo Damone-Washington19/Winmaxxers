@@ -1,71 +1,61 @@
-import pandas as pd
-from xgboost import XGBRegressor
+import numpy as np
+from train_model import train_regression_model
+from utils import load_data, add_features, get_feature_columns
 
-# Load data from GitHub
-DATA_URL = "https://raw.githubusercontent.com/Damone-Washington19/Winmaxxers/main/data-prep/Features/years_features.csv"
-data = pd.read_csv(DATA_URL)
+def recursive_forecast(start_year, end_year=2031):
+    model, feature_cols, df, df_target = train_regression_model()
 
-# Sort and create next-year label
-data = data.sort_values(["page_id", "year"])
-data["pagerank_next_year"] = data.groupby("page_id")["pagerank"].shift(-1)
+    df_current = df[df["year"] == start_year].copy()
 
-# Feature list
-FEATURE_COLS = [
-    "in_degree", "out_degree", "total_degree", "pagerank",
-    "betweenness_centrality", "closeness_centrality",
-    "eigenvector_centrality", "katz_centrality",
-    "hub_score", "authority_score", "clustering_coefficient",
-    "core_number", "avg_neighbor_degree", "avg_neighbor_pagerank",
-    "community_size", "bridging_score"
-]
+    df_sorted = df.sort_values(["page_id", "year"]).copy()
+    df_sorted["pagerank_lag_1"] = df_sorted.groupby("page_id")["pagerank"].shift(1)
+    df_sorted["pagerank_lag_2"] = df_sorted.groupby("page_id")["pagerank"].shift(2)
 
-def train_base_model():
-    """Train the one-year-ahead model on all available historical data."""
-    train = data.dropna(subset=["pagerank_next_year"])
-    X_train = train[FEATURE_COLS]
-    y_train = train["pagerank_next_year"]
+    df_current = df_current.merge(
+        df_sorted[["page_id", "year", "pagerank_lag_1", "pagerank_lag_2"]],
+        on=["page_id", "year"],
+        how="left"
+    ).dropna(subset=["pagerank_lag_1", "pagerank_lag_2"])
 
-    model = XGBRegressor(
-        n_estimators=500,
-        learning_rate=0.05,
-        max_depth=6,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        random_state=42,
-    )
-    model.fit(X_train, y_train)
-    return model
+    structural_features = [
+        c for c in feature_cols
+        if "pagerank" not in c and "lag" not in c
+    ]
 
-def recursive_forecast(start_year=2026, steps=5):
-    """
-    Predict multiple years into the future using recursive forecasting.
-    start_year = last real year in the dataset
-    steps = how many years ahead to predict
-    """
-    model = train_base_model()
+    df_hist = df.sort_values(["page_id", "year"]).copy()
+    yoY_change = {}
+    for feat in structural_features:
+        df_hist[f"{feat}_pct"] = df_hist.groupby("page_id")[feat].pct_change()
+        yoY_change[feat] = df_hist[f"{feat}_pct"].mean()
 
-    # Start with the last real year
-    current = data[data["year"] == start_year].copy()
+    historical_rmse = 0.1  # heuristic
+
     forecasts = []
+    curr = df_current.copy()
 
-    for i in range(1, steps + 1):
-        future_year = start_year + i
+    for step, year in enumerate(range(start_year + 1, end_year + 1), start=1):
+        X = curr[feature_cols].values
+        curr["predicted_growth"] = model.predict(X)
+        curr["pagerank"] *= (1 + curr["predicted_growth"])
+        curr["year"] = year
 
-        # Predict next-year PageRank
-        current["predicted_pagerank"] = model.predict(current[FEATURE_COLS])
+        for feat in structural_features:
+            curr[feat] *= (1 + yoY_change.get(feat, 0))
 
-        # Save results
-        result = current[["page_id", "title"]].copy()
-        result["year"] = future_year
-        result["predicted_pagerank"] = current["predicted_pagerank"]
-        forecasts.append(result)
+        uncertainty = historical_rmse * step
 
-        # Prepare for next iteration
-        current = current.copy()
-        current["pagerank"] = current["predicted_pagerank"]
+        for _, row in curr.iterrows():
+            forecasts.append({
+                "page_id": row["page_id"],
+                "title": row["title"],
+                "year": year,
+                "predicted_pagerank": row["pagerank"],
+                "predicted_growth": row["predicted_growth"],
+                "uncertainty": uncertainty
+            })
 
-    return pd.concat(forecasts, ignore_index=True)
+    return forecasts
 
 if __name__ == "__main__":
-    forecast = recursive_forecast(start_year=2026, steps=5)
-    print(forecast.sort_values(["year", "predicted_pagerank"], ascending=[True, False]).head(50))
+    out = recursive_forecast(2026)
+    print(out[:5])
