@@ -1,3 +1,4 @@
+# Winmaxxers
 # 🔬 NanoTrend Vanguard: Wikipedia Knowledge Graph Engine
 
 **Track Alignment:** This project is officially submitted to **Track 2: What’s Next? — Future Event Predictor**.
