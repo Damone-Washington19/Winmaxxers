@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NanoVerse — Nanotechnology Knowledge Intelligence</title>
+<meta name="description" content="Explore the nanotechnology knowledge universe through interactive graph visualization, community detection, and ML-powered 2027 predictions.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* ===== DESIGN TOKENS ===== */
+:root {
+  --void: #03050d;
+  --deep: #060c1a;
+  --surface: #0b1628;
+  --panel: rgba(11,22,40,0.92);
+  --rim: rgba(64,150,255,0.18);
+  --rim2: rgba(64,150,255,0.08);
+  --accent: #4096ff;
+  --accent2: #00e5ff;
+  --accent3: #7c4dff;
+  --gold: #ffd740;
+  --rise: #00e5a0;
+  --fall: #ff5252;
+  --stable: #90caf9;
+  --text: #c8d8f0;
+  --text-dim: #5a7499;
+  --text-bright: #e8f0ff;
+  --mono: 'JetBrains Mono', 'Courier New', monospace;
+  --sans: 'Inter', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--void);
+  color: var(--text);
+  font-family: var(--sans);
+  overflow: hidden;
+}
+
+/* ===== COSMIC CANVAS ===== */
+#cosmos { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+
+/* ===== LAYOUT ===== */
+#app { position: relative; display: flex; flex-direction: column; height: 100vh; z-index: 1; }
+
+/* ===== TOP NAV ===== */
+#topnav {
+  display: flex; align-items: center; gap: 0; height: 54px;
+  background: rgba(3,5,13,0.95); border-bottom: 1px solid var(--rim);
+  backdrop-filter: blur(20px); z-index: 100; flex-shrink: 0;
+}
+.nav-logo { display: flex; align-items: center; gap: 10px; padding: 0 24px; border-right: 1px solid var(--rim); height: 100%; }
+.logo-hex { width: 32px; height: 32px; position: relative; }
+.logo-hex svg { width: 100%; height: 100%; }
+.nav-brand { font-size: 15px; font-weight: 700; letter-spacing: 0.08em; color: var(--text-bright); }
+.nav-brand span { color: var(--accent2); }
+.nav-tabs { display: flex; height: 100%; flex: 1; }
+.nav-tab {
+  display: flex; align-items: center; gap: 8px; padding: 0 22px; height: 100%; cursor: pointer;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-dim); border-right: 1px solid var(--rim2); transition: all 0.2s;
+  border-bottom: 2px solid transparent; user-select: none;
+}
+.nav-tab:hover { color: var(--text); background: var(--rim2); }
+.nav-tab.active { color: var(--accent2); border-bottom-color: var(--accent2); background: rgba(0,229,255,0.04); }
+.nav-tab .tab-icon { font-size: 16px; }
+.nav-right {
+  display: flex; align-items: center; gap: 12px; padding: 0 20px;
+  margin-left: auto; border-left: 1px solid var(--rim); height: 100%;
+}
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--rise); box-shadow: 0 0 6px var(--rise); animation: pulse-dot 2s ease-in-out infinite; }
+@keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+.status-label { font-size: 10px; letter-spacing: 0.1em; color: var(--text-dim); text-transform: uppercase; }
+
+/* ===== PAGES ===== */
+.page { display: none; flex: 1; overflow: hidden; position: relative; }
+.page.active { display: flex; }
+
+/* ===== PAGE 1: KNOWLEDGE UNIVERSE ===== */
+#page-universe { flex-direction: row; }
+#graph-container { flex: 1; position: relative; overflow: hidden; }
+#graph-canvas { width: 100%; height: 100%; }
+
+/* Time controls */
+#time-controls {
+  position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--panel); border: 1px solid var(--rim); border-radius: 12px;
+  padding: 14px 24px; backdrop-filter: blur(20px); display: flex;
+  flex-direction: column; gap: 10px; min-width: 520px; z-index: 10;
+}
+.time-header { display: flex; align-items: center; justify-content: space-between; }
+.time-label { font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent2); }
+.time-year-display { font-family: var(--mono); font-size: 18px; font-weight: 700; color: var(--gold); text-shadow: 0 0 12px rgba(255,215,64,0.5); }
+.time-track { display: flex; align-items: center; gap: 14px; }
+.time-play-btn {
+  width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--accent);
+  background: rgba(64,150,255,0.1); color: var(--accent); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 10px;
+  flex-shrink: 0; transition: all 0.2s;
+}
+.time-play-btn:hover { background: rgba(64,150,255,0.25); }
+.time-slider-wrap { flex: 1; position: relative; display: flex; flex-direction: column; gap: 6px; }
+.year-marks { display: flex; justify-content: space-between; }
+.year-mark { font-size: 10px; font-family: var(--mono); color: var(--text-dim); cursor: pointer; transition: color 0.2s; padding: 2px 4px; border-radius: 3px; }
+.year-mark:hover, .year-mark.active-mark { color: var(--gold); }
+input[type=range]#year-slider {
+  -webkit-appearance: none; width: 100%; height: 3px;
+  background: linear-gradient(to right, var(--accent) var(--pct, 0%), var(--rim) var(--pct, 0%));
+  border-radius: 2px; outline: none; cursor: pointer;
+}
+input[type=range]#year-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--gold); border: 2px solid var(--void); box-shadow: 0 0 10px rgba(255,215,64,0.6); cursor: pointer;
+}
+.time-stats { display: flex; gap: 20px; }
+.time-stat { display: flex; align-items: center; gap: 6px; }
+.time-stat-val { font-family: var(--mono); font-size: 13px; color: var(--accent2); font-weight: 700; }
+.time-stat-lbl { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+
+/* Graph controls */
+#graph-controls { position: absolute; top: 16px; left: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 10; }
+.graph-btn {
+  width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--rim);
+  background: var(--panel); color: var(--text); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+  backdrop-filter: blur(10px); transition: all 0.2s;
+}
+.graph-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Search */
+#graph-search { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 10; }
+#search-input {
+  background: var(--panel); border: 1px solid var(--rim); border-radius: 24px;
+  padding: 8px 16px 8px 38px; color: var(--text-bright); font-size: 13px;
+  width: 280px; outline: none; backdrop-filter: blur(20px); transition: all 0.2s; font-family: var(--sans);
+}
+#search-input:focus { border-color: var(--accent); width: 340px; }
+#search-input::placeholder { color: var(--text-dim); }
+.search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 13px; pointer-events: none; }
+#search-results {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+  background: var(--panel); border: 1px solid var(--rim); border-radius: 10px;
+  overflow: hidden; backdrop-filter: blur(20px); display: none; max-height: 200px; overflow-y: auto;
+}
+.search-result-item { padding: 8px 14px; font-size: 12px; cursor: pointer; border-bottom: 1px solid var(--rim2); transition: background 0.15s; display: flex; align-items: center; gap: 8px; }
+.search-result-item:hover { background: var(--rim2); }
+.search-result-item:last-child { border-bottom: none; }
+.sri-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+/* Legend */
+#graph-legend {
+  position: absolute; top: 16px; right: 16px; background: var(--panel);
+  border: 1px solid var(--rim); border-radius: 10px; padding: 12px;
+  backdrop-filter: blur(20px); z-index: 10; min-width: 180px;
+}
+.legend-title { font-size: 9px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px; }
+.legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; cursor: pointer; transition: opacity 0.2s; }
+.legend-item:hover { opacity: 0.8; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.legend-lbl { font-size: 10px; color: var(--text-dim); }
+
+/* NODE PANEL */
+#node-panel {
+  width: 0; overflow: hidden; transition: width 0.3s ease; border-left: 1px solid var(--rim);
+  background: var(--deep); display: flex; flex-direction: column; flex-shrink: 0;
+}
+#node-panel.open { width: 360px; }
+#panel-header { padding: 16px; border-bottom: 1px solid var(--rim); display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.panel-close { width: 24px; height: 24px; cursor: pointer; color: var(--text-dim); font-size: 16px; display: flex; align-items: center; justify-content: center; border-radius: 4px; flex-shrink: 0; transition: color 0.2s; }
+.panel-close:hover { color: var(--text); }
+.panel-node-title { font-size: 15px; font-weight: 700; color: var(--text-bright); line-height: 1.3; }
+.panel-community-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; margin-top: 6px; letter-spacing: 0.05em; }
+.panel-tabs { display: flex; border-bottom: 1px solid var(--rim); }
+.panel-tab { flex: 1; padding: 10px 4px; text-align: center; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+.panel-tab.active { color: var(--accent2); border-bottom-color: var(--accent2); }
+.panel-tab:hover { color: var(--text); }
+.panel-body { flex: 1; overflow-y: auto; padding: 16px; scrollbar-width: thin; scrollbar-color: var(--rim) transparent; }
+.metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.metric-card { background: rgba(64,150,255,0.05); border: 1px solid var(--rim2); border-radius: 8px; padding: 10px; }
+.metric-val { font-family: var(--mono); font-size: 16px; font-weight: 700; color: var(--accent2); }
+.metric-lbl { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 2px; }
+.trend-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-bottom: 14px; }
+.trend-badge.rising { background: rgba(0,229,160,0.15); color: var(--rise); border: 1px solid rgba(0,229,160,0.3); }
+.trend-badge.stable { background: rgba(144,202,249,0.1); color: var(--stable); border: 1px solid rgba(144,202,249,0.2); }
+.trend-badge.declining { background: rgba(255,82,82,0.1); color: var(--fall); border: 1px solid rgba(255,82,82,0.2); }
+.panel-chart-wrap { height: 130px; min-height: 100px; position: relative; margin-bottom: 8px; }
+.insight-card { background: rgba(64,150,255,0.04); border: 1px solid var(--rim2); border-left: 3px solid var(--accent); border-radius: 6px; padding: 10px 12px; font-size: 12px; color: var(--text); line-height: 1.6; margin-bottom: 10px; }
+
+/* ===== PAGE 2: HOW IT WORKS ===== */
+#page-howworks { flex-direction: column; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--rim) transparent; }
+.pipeline-hero { text-align: center; padding: 48px 32px 32px; border-bottom: 1px solid var(--rim); }
+.pipeline-hero h1 { font-size: 28px; font-weight: 800; color: var(--text-bright); margin-bottom: 10px; letter-spacing: -0.02em; }
+.pipeline-hero h1 span { color: var(--accent2); }
+.pipeline-hero p { font-size: 14px; color: var(--text-dim); max-width: 560px; margin: 0 auto 20px; line-height: 1.6; }
+.level-switcher { display: inline-flex; background: var(--surface); border: 1px solid var(--rim); border-radius: 24px; overflow: hidden; }
+.level-btn { padding: 8px 18px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; color: var(--text-dim); border-radius: 24px; transition: all 0.2s; user-select: none; }
+.level-btn.active { background: var(--accent); color: white; }
+#page-howworks > div { flex-shrink: 0; }
+.pipeline-flow { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; padding: 32px 20px; overflow-x: auto; flex-shrink: 0; }
+.pipeline-step { display: flex; flex-direction: column; align-items: center; cursor: pointer; position: relative; }
+.pipeline-step-inner { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px 16px; border: 1px solid var(--rim); border-radius: 16px; background: var(--panel); width: 140px; transition: all 0.25s; backdrop-filter: blur(10px); }
+.pipeline-step-inner:hover, .pipeline-step.active .pipeline-step-inner { border-color: var(--accent); background: rgba(64,150,255,0.08); box-shadow: 0 0 20px rgba(64,150,255,0.1); }
+.step-icon { font-size: 28px; }
+.step-name { font-size: 12px; font-weight: 700; color: var(--text-bright); text-align: center; }
+.step-tag { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); text-align: center; }
+.pipeline-arrow { display: flex; align-items: center; padding: 0 4px; color: var(--accent); font-size: 20px; flex-shrink: 0; }
+.pipeline-detail { max-width: 860px; margin: 0 auto; padding: 0 40px 20px; }
+.detail-panel { background: var(--panel); border: 1px solid var(--rim); border-radius: 16px; padding: 28px; backdrop-filter: blur(10px); }
+.detail-header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+.detail-icon { font-size: 36px; }
+.detail-title { font-size: 20px; font-weight: 800; color: var(--text-bright); }
+.detail-subtitle { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.detail-text { font-size: 13px; color: var(--text); line-height: 1.8; margin-bottom: 16px; }
+.concepts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 20px; }
+.concept-card { background: rgba(64,150,255,0.05); border: 1px solid var(--rim2); border-radius: 10px; padding: 14px; }
+.concept-title { font-size: 12px; font-weight: 700; color: var(--accent2); margin-bottom: 6px; }
+.concept-text { font-size: 11px; color: var(--text-dim); line-height: 1.6; }
+.feat-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.feat-bar-label { font-size: 11px; color: var(--text); width: 200px; flex-shrink: 0; text-transform: capitalize; }
+.feat-bar-track { flex: 1; height: 6px; background: var(--rim2); border-radius: 3px; overflow: hidden; }
+.feat-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(to right, var(--accent3), var(--accent2)); transition: width 1s ease; }
+.feat-bar-pct { font-family: var(--mono); font-size: 11px; color: var(--accent); width: 50px; text-align: right; flex-shrink: 0; }
+
+/* How It Works - Deep Dive Sections */
+.hiw-divider { max-width: 860px; margin: 0 auto; padding: 0 40px; }
+.hiw-divider hr { border: none; border-top: 1px solid var(--rim); margin: 10px 0 30px; }
+.hiw-section { max-width: 860px; margin: 0 auto; padding: 0 40px 40px; }
+.hiw-section-title { font-size: 22px; font-weight: 800; color: var(--text-bright); margin-bottom: 8px; display: flex; align-items: center; gap: 12px; }
+.hiw-section-sub { font-size: 13px; color: var(--text-dim); margin-bottom: 24px; line-height: 1.6; }
+.metric-ref-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.metric-ref-card {
+  background: var(--panel); border: 1px solid var(--rim); border-radius: 14px;
+  padding: 20px; backdrop-filter: blur(10px); transition: border-color 0.2s;
+}
+.metric-ref-card:hover { border-color: var(--accent); }
+.mrc-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.mrc-icon { font-size: 22px; }
+.mrc-name { font-size: 14px; font-weight: 700; color: var(--accent2); }
+.mrc-desc { font-size: 12px; color: var(--text); line-height: 1.7; margin-bottom: 8px; }
+.mrc-formula { font-family: var(--mono); font-size: 10px; color: var(--accent); background: rgba(64,150,255,0.06); padding: 6px 10px; border-radius: 6px; display: inline-block; }
+.community-flow { display: flex; align-items: center; gap: 0; justify-content: center; margin: 24px 0; flex-wrap: wrap; }
+.comm-step { background: var(--panel); border: 1px solid var(--rim); border-radius: 12px; padding: 16px 20px; text-align: center; min-width: 140px; }
+.comm-step-icon { font-size: 24px; margin-bottom: 6px; }
+.comm-step-label { font-size: 11px; font-weight: 700; color: var(--text-bright); }
+.comm-step-detail { font-size: 10px; color: var(--text-dim); margin-top: 4px; }
+.comm-arrow { color: var(--accent); font-size: 20px; padding: 0 8px; }
+.model-spec-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 20px 0; }
+.model-spec { background: rgba(64,150,255,0.05); border: 1px solid var(--rim2); border-radius: 10px; padding: 14px; text-align: center; }
+.model-spec .val { font-family: var(--mono); font-size: 18px; font-weight: 800; color: var(--accent2); }
+.model-spec .lbl { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 4px; }
+.trend-explain { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 16px 0; }
+.trend-ex-card { padding: 12px; border-radius: 10px; text-align: center; }
+.trend-ex-card.r { background: rgba(0,229,160,0.08); border: 1px solid rgba(0,229,160,0.2); }
+.trend-ex-card.s { background: rgba(144,202,249,0.06); border: 1px solid rgba(144,202,249,0.15); }
+.trend-ex-card.d { background: rgba(255,82,82,0.06); border: 1px solid rgba(255,82,82,0.15); }
+.trend-ex-card .arrow { font-size: 22px; }
+.trend-ex-card .name { font-size: 12px; font-weight: 700; margin-top: 4px; }
+.trend-ex-card .rule { font-size: 10px; color: var(--text-dim); margin-top: 4px; }
+
+/* ===== PAGE 3: EMERGING TOPICS ===== */
+#page-predictions { flex-direction: column; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--rim) transparent; }
+.pred-hero { padding: 32px 40px 24px; border-bottom: 1px solid var(--rim); display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 20px; }
+.pred-hero-text h1 { font-size: 24px; font-weight: 800; color: var(--text-bright); margin-bottom: 6px; letter-spacing: -0.02em; }
+.pred-hero-text h1 span { color: var(--rise); }
+.pred-hero-text p { font-size: 13px; color: var(--text-dim); }
+.pred-controls { display: flex; gap: 10px; align-items: center; }
+.pred-filter-btn { padding: 7px 14px; border-radius: 20px; border: 1px solid var(--rim); background: transparent; color: var(--text-dim); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; cursor: pointer; transition: all 0.2s; text-transform: uppercase; font-family: var(--sans); }
+.pred-filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+.pred-filter-btn.active { border-color: var(--accent2); color: var(--accent2); background: rgba(0,229,255,0.06); }
+.pred-content { display: flex; flex: 1; overflow: hidden; min-height: 0; height: calc(100vh - 170px); }
+.pred-list { width: 420px; flex-shrink: 0; overflow-y: auto; border-right: 1px solid var(--rim); scrollbar-width: thin; scrollbar-color: var(--rim) transparent; padding: 16px; height: 100%; }
+.pred-card { display: flex; align-items: center; gap: 14px; padding: 14px; border: 1px solid var(--rim2); border-radius: 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; background: rgba(11,22,40,0.5); }
+.pred-card:hover, .pred-card.active { border-color: var(--accent); background: rgba(64,150,255,0.06); }
+.pred-rank { font-family: var(--mono); font-size: 20px; font-weight: 800; color: var(--text-dim); width: 32px; text-align: center; flex-shrink: 0; }
+.pred-rank.top3 { color: var(--gold); }
+.pred-info { flex: 1; min-width: 0; }
+.pred-title { font-size: 13px; font-weight: 700; color: var(--text-bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pred-meta { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+.pred-score { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.pred-score-val { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--accent2); }
+.pred-trend-pill { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+.pred-trend-pill.rising { background: rgba(0,229,160,0.15); color: var(--rise); }
+.pred-trend-pill.stable { background: rgba(144,202,249,0.1); color: var(--stable); }
+.pred-trend-pill.declining { background: rgba(255,82,82,0.1); color: var(--fall); }
+.pred-detail { flex: 1; overflow-y: auto; padding: 24px; scrollbar-width: thin; scrollbar-color: var(--rim) transparent; height: 100%; }
+.pred-detail-title { font-size: 22px; font-weight: 800; color: var(--text-bright); margin-bottom: 6px; }
+.pred-detail-community { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; margin-bottom: 16px; }
+.pred-score-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 24px; }
+.pred-score-card { background: var(--panel); border: 1px solid var(--rim); border-radius: 10px; padding: 14px; text-align: center; }
+.pred-score-card .val { font-family: var(--mono); font-size: 18px; font-weight: 800; color: var(--accent2); margin-bottom: 4px; }
+.pred-score-card .lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); }
+.pred-chart-wrap { background: var(--panel); border: 1px solid var(--rim); border-radius: 12px; padding: 20px; margin-bottom: 16px; height: 210px; min-height: 160px; position: relative; }
+.evidence-list { list-style: none; }
+.evidence-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--rim2); font-size: 12px; color: var(--text); line-height: 1.5; }
+.evidence-item:last-child { border-bottom: none; }
+.evidence-bullet { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 4px; }
+
+/* ===== TOOLTIP ===== */
+#tooltip { position: fixed; background: var(--panel); border: 1px solid var(--rim); border-radius: 10px; padding: 10px 14px; pointer-events: none; z-index: 1000; display: none; backdrop-filter: blur(20px); max-width: 220px; }
+.tt-title { font-size: 13px; font-weight: 700; color: var(--text-bright); margin-bottom: 4px; }
+.tt-comm { font-size: 10px; color: var(--text-dim); margin-bottom: 6px; }
+.tt-row { display: flex; justify-content: space-between; gap: 20px; font-size: 11px; color: var(--text-dim); }
+.tt-val { font-family: var(--mono); color: var(--accent2); }
+
+/* ===== LOADER ===== */
+#loader { position: fixed; inset: 0; background: var(--void); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; transition: opacity 0.6s; }
+.loader-logo { font-size: 48px; font-weight: 900; color: var(--accent2); letter-spacing: -0.03em; text-shadow: 0 0 30px rgba(0,229,255,0.4); font-family: var(--sans); }
+.loader-logo span { color: var(--accent3); }
+.loader-sub { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); }
+.loader-bar-track { width: 280px; height: 2px; background: var(--rim2); border-radius: 2px; overflow: hidden; }
+.loader-bar-fill { height: 100%; background: linear-gradient(to right, var(--accent3), var(--accent2)); width: 0%; transition: width 0.3s ease; }
+.loader-status { font-size: 10px; font-family: var(--mono); color: var(--text-dim); }
+
+/* ===== MISC ===== */
+.section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--rim2); }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--rim); border-radius: 2px; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.fade-in { animation: fadeIn 0.4s ease forwards; }
+</style>
+</head>
+<body>
+
+<!-- Loader -->
+<div id="loader">
+  <div class="loader-logo">Nano<span>Verse</span></div>
+  <div class="loader-sub">Nanotechnology Knowledge Intelligence System</div>
+  <div class="loader-bar-track"><div class="loader-bar-fill" id="loader-bar"></div></div>
+  <div class="loader-status" id="loader-status">Initializing...</div>
+</div>
+
+<canvas id="cosmos"></canvas>
+
+<div id="app">
+  <nav id="topnav">
+    <div class="nav-logo">
+      <div class="logo-hex">
+        <svg viewBox="0 0 32 32" fill="none"><polygon points="16,2 28,9 28,23 16,30 4,23 4,9" fill="none" stroke="#4096ff" stroke-width="1.5"/><polygon points="16,8 22,11.5 22,20.5 16,24 10,20.5 10,11.5" fill="rgba(64,150,255,0.15)" stroke="#00e5ff" stroke-width="1"/><circle cx="16" cy="16" r="3" fill="#00e5ff" opacity="0.8"/></svg>
+      </div>
+      <div class="nav-brand">Nano<span>Verse</span></div>
+    </div>
+    <div class="nav-tabs">
+      <div class="nav-tab active" data-page="universe" onclick="switchPage('universe')"><span class="tab-icon">🌌</span> Knowledge Universe</div>
+      <div class="nav-tab" data-page="howworks" onclick="switchPage('howworks')"><span class="tab-icon">⚙️</span> How It Works</div>
+      <div class="nav-tab" data-page="predictions" onclick="switchPage('predictions')"><span class="tab-icon">🔮</span> Emerging Topics</div>
+    </div>
+    <div class="nav-right">
+      <div class="status-dot"></div>
+      <div class="status-label" id="nav-status">Loading…</div>
+    </div>
+  </nav>
+
+  <!-- PAGE 1: KNOWLEDGE UNIVERSE -->
+  <div class="page active" id="page-universe">
+    <div id="graph-container">
+      <svg id="graph-canvas"></svg>
+      <div id="graph-controls">
+        <div class="graph-btn" onclick="zoomIn()" title="Zoom In">+</div>
+        <div class="graph-btn" onclick="zoomOut()" title="Zoom Out">−</div>
+        <div class="graph-btn" onclick="resetView()" title="Reset View">⌂</div>
+        <div class="graph-btn" onclick="toggleLabels()" title="Toggle Labels" id="label-btn">A</div>
+      </div>
+      <div id="graph-search">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Search nanotechnology topics…" oninput="handleSearch(this.value)" onfocus="showResults()" onblur="hideResults()">
+        <div id="search-results"></div>
+      </div>
+      <div id="graph-legend"><div class="legend-title">Communities</div><div id="legend-items"></div></div>
+      <div id="time-controls">
+        <div class="time-header">
+          <span class="time-label">⏱ Time Travel</span>
+          <span class="time-year-display" id="year-display">2026</span>
+        </div>
+        <div class="time-track">
+          <div class="time-play-btn" id="play-btn" onclick="togglePlay()">▶</div>
+          <div class="time-slider-wrap">
+            <div class="year-marks" id="year-marks"></div>
+            <input type="range" id="year-slider" min="0" max="6" value="6" step="1" oninput="onSliderChange(this.value)">
+          </div>
+        </div>
+        <div class="time-stats">
+          <div class="time-stat"><span class="time-stat-val" id="stat-nodes">0</span><span class="time-stat-lbl">Nodes</span></div>
+          <div class="time-stat"><span class="time-stat-val" id="stat-edges">0</span><span class="time-stat-lbl">Edges</span></div>
+          <div class="time-stat"><span class="time-stat-val" id="stat-comms">0</span><span class="time-stat-lbl">Communities</span></div>
+          <div class="time-stat"><span class="time-stat-val" id="stat-density">–</span><span class="time-stat-lbl">Density</span></div>
+        </div>
+      </div>
+    </div>
+    <div id="node-panel">
+      <div id="panel-header">
+        <div><div class="panel-node-title" id="panel-title">Select a node</div><div class="panel-community-badge" id="panel-community"></div></div>
+        <div class="panel-close" onclick="closePanel()">✕</div>
+      </div>
+      <div class="panel-tabs">
+        <div class="panel-tab active" data-ptab="overview" onclick="switchPanelTab('overview')">Overview</div>
+        <div class="panel-tab" data-ptab="metrics" onclick="switchPanelTab('metrics')">Metrics</div>
+        <div class="panel-tab" data-ptab="history" onclick="switchPanelTab('history')">History</div>
+        <div class="panel-tab" data-ptab="forecast" onclick="switchPanelTab('forecast')">Forecast</div>
+      </div>
+      <div class="panel-body" id="panel-body"></div>
+    </div>
+  </div>
+
+  <!-- PAGE 2: HOW IT WORKS -->
+  <div class="page" id="page-howworks">
+    <div class="pipeline-hero">
+      <h1>How <span>NanoVerse</span> Works</h1>
+      <p>From raw Wikipedia data to predictive intelligence — a complete knowledge graph pipeline that reveals the hidden structure of nanotechnology research.</p>
+      <div class="level-switcher">
+        <div class="level-btn active" onclick="setLevel('beginner')">Beginner</div>
+        <div class="level-btn" onclick="setLevel('professional')">Professional</div>
+        <div class="level-btn" onclick="setLevel('technical')">Technical</div>
+      </div>
+    </div>
+    <div class="pipeline-flow" id="pipeline-flow">
+      <div class="pipeline-step active" data-step="0" onclick="selectStep(0)"><div class="pipeline-step-inner"><div class="step-icon">📚</div><div class="step-name">Wikipedia</div><div class="step-tag">Data Source</div></div></div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-step" data-step="1" onclick="selectStep(1)"><div class="pipeline-step-inner"><div class="step-icon">📸</div><div class="step-name">Snapshots</div><div class="step-tag">2020–2026</div></div></div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-step" data-step="2" onclick="selectStep(2)"><div class="pipeline-step-inner"><div class="step-icon">🕸️</div><div class="step-name">Graph Build</div><div class="step-tag">Nodes & Edges</div></div></div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-step" data-step="3" onclick="selectStep(3)"><div class="pipeline-step-inner"><div class="step-icon">📊</div><div class="step-name">Analytics</div><div class="step-tag">PageRank · Centrality</div></div></div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-step" data-step="4" onclick="selectStep(4)"><div class="pipeline-step-inner"><div class="step-icon">🤖</div><div class="step-name">ML Model</div><div class="step-tag">XGBoost</div></div></div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-step" data-step="5" onclick="selectStep(5)"><div class="pipeline-step-inner"><div class="step-icon">🔮</div><div class="step-name">Predictions</div><div class="step-tag">2027 Forecast</div></div></div>
+    </div>
+    <div class="pipeline-detail" id="pipeline-detail"></div>
+
+    <!-- Deep-dive sections -->
+    <div class="hiw-divider"><hr></div>
+
+    <div class="hiw-section">
+      <div class="hiw-section-title">📐 Metrics Reference</div>
+      <div class="hiw-section-sub">Every node in the knowledge graph is scored on 16 dimensions. Here are the key metrics that power the analysis and predictions.</div>
+      <div class="metric-ref-grid">
+        <div class="metric-ref-card"><div class="mrc-header"><div class="mrc-icon">📈</div><div class="mrc-name">PageRank</div></div><div class="mrc-desc">Measures a topic's <strong>global influence</strong> — how important it is based on how many other important topics link to it. Originally invented by Google to rank web pages. A high PageRank means the topic is widely cited by other influential concepts.</div><div class="mrc-formula">PR(A) = (1-d) + d × Σ PR(Tᵢ)/C(Tᵢ)</div></div>
+        <div class="metric-ref-card"><div class="mrc-header"><div class="mrc-icon">🌉</div><div class="mrc-name">Betweenness Centrality</div></div><div class="mrc-desc">How often this topic appears on the <strong>shortest path</strong> between any two other topics. High betweenness means it's a "bridge" connecting different research areas — these nodes are critical for knowledge flow.</div><div class="mrc-formula">CB(v) = Σ σst(v) / σst</div></div>
+        <div class="metric-ref-card"><div class="mrc-header"><div class="mrc-icon">🎯</div><div class="mrc-name">Closeness Centrality</div></div><div class="mrc-desc">Measures how <strong>close</strong> a node is to all other nodes. Topics with high closeness can reach any other topic in fewer steps, meaning they're at the center of the knowledge network.</div><div class="mrc-formula">CC(v) = (n-1) / Σ d(v,u)</div></div>
+        <div class="metric-ref-card"><div class="mrc-header"><div class="mrc-icon">👑</div><div class="mrc-name">Eigenvector Centrality</div></div><div class="mrc-desc">Similar to PageRank but measures influence by considering <strong>neighbor quality</strong>. A topic linked by many high-scoring topics gets a higher eigenvector score — it's not just who links to you, but how important they are.</div><div class="mrc-formula">x(v) = (1/λ) × Σ A(v,t)·x(t)</div></div>
+        <div class="metric-ref-card"><div class="mrc-header"><div class="mrc-icon">🔗</div><div class="mrc-name">Katz Centrality</div></div><div class="mrc-desc">Counts <strong>all paths</strong> leading to a node, with longer paths weighted less via an attenuation factor. Captures influence from distant parts of the network that other metrics might miss.</div><div class="mrc-formula">Katz(v) = Σ αᵏ × (Aᵏ)ᵢ</div></div>
+        <div class="metric-ref-card"><div class="mrc-header"><div class="mrc-icon">🔄</div><div class="mrc-name">HITS (Hub & Authority)</div></div><div class="mrc-desc">Each node has two scores: <strong>Authority</strong> (linked TO by hubs) and <strong>Hub</strong> (links TO authorities). Authorities are expert topics; hubs are survey/overview topics that point to many authorities.</div><div class="mrc-formula">Auth(p) = Σ Hub(q), Hub(p) = Σ Auth(q)</div></div>
+        <div class="metric-ref-card"><div class="mrc-header"><div class="mrc-icon">🔺</div><div class="mrc-name">Clustering Coefficient</div></div><div class="mrc-desc">Measures how interconnected a topic's <strong>neighbors</strong> are. High clustering = the topic exists in a tight-knit research cluster. Low clustering = the topic bridges disparate areas.</div><div class="mrc-formula">C(v) = 2T(v) / (deg(v) × (deg(v)-1))</div></div>
+        <div class="metric-ref-card"><div class="mrc-header"><div class="mrc-icon">🧱</div><div class="mrc-name">Core Number (k-core)</div></div><div class="mrc-desc">The highest k-core a node belongs to — a k-core is a subgraph where every node has at least k connections. Higher core number = deeper in the <strong>densely connected core</strong> of the network.</div><div class="mrc-formula">max k : v ∈ k-core(G)</div></div>
+        <div class="metric-ref-card"><div class="mrc-header"><div class="mrc-icon">🌟</div><div class="mrc-name">Bridging Score</div></div><div class="mrc-desc">A <strong>composite metric</strong> combining betweenness centrality with inverse clustering coefficient. Identifies nodes that bridge communities while NOT being part of a tight cluster — the true interdisciplinary connectors.</div><div class="mrc-formula">BS(v) = Betweenness(v) × (1 - Clustering(v))</div></div>
+        <div class="metric-ref-card"><div class="mrc-header"><div class="mrc-icon">👥</div><div class="mrc-name">Avg Neighbor PageRank</div></div><div class="mrc-desc">The <strong>average influence of a topic's neighbors</strong>. A topic surrounded by high-PageRank neighbors is in an influential neighborhood — even if it's not yet highly ranked itself, it may rise.</div><div class="mrc-formula">ANP(v) = (1/deg(v)) × Σ PR(u)</div></div>
+      </div>
+    </div>
+
+    <div class="hiw-divider"><hr></div>
+
+    <div class="hiw-section">
+      <div class="hiw-section-title">🧩 How Communities Are Computed</div>
+      <div class="hiw-section-sub">Communities are groups of topics that are more densely connected to each other than to the rest of the network. They reveal the natural structure of nanotechnology research.</div>
+
+      <div class="community-flow">
+        <div class="comm-step"><div class="comm-step-icon">🕸️</div><div class="comm-step-label">Full Graph</div><div class="comm-step-detail">1,621 nodes</div></div>
+        <div class="comm-arrow">→</div>
+        <div class="comm-step"><div class="comm-step-icon">📐</div><div class="comm-step-label">Modularity Optimization</div><div class="comm-step-detail">Louvain Algorithm</div></div>
+        <div class="comm-arrow">→</div>
+        <div class="comm-step"><div class="comm-step-icon">🎨</div><div class="comm-step-label">Community Assignment</div><div class="comm-step-detail">Color-coded groups</div></div>
+        <div class="comm-arrow">→</div>
+        <div class="comm-step"><div class="comm-step-icon">🏷️</div><div class="comm-step-label">Auto-Labeling</div><div class="comm-step-detail">Top category name</div></div>
+      </div>
+
+      <div class="detail-text" style="margin-top:16px">
+        <strong style="color:var(--accent2)">The Louvain Algorithm</strong> works in two phases that repeat until optimal:
+        <br><br>
+        <strong>Phase 1 — Local moves:</strong> Each node is initially its own community. The algorithm tries moving each node to a neighboring community and checks if this improves <em>modularity</em> (a score from -1 to 1 measuring how well-separated communities are). Moves that increase modularity are kept.
+        <br><br>
+        <strong>Phase 2 — Aggregation:</strong> Each community is collapsed into a single "super-node," creating a smaller graph. Phase 1 repeats on this compressed graph. This continues until modularity can't improve further.
+        <br><br>
+        <strong style="color:var(--accent2)">Community names</strong> are assigned automatically by finding the most common Wikipedia category among all nodes in each community. For example, a community full of drug delivery, nanomedicine, and biocompatibility articles gets labeled by the dominant shared category.
+      </div>
+    </div>
+
+    <div class="hiw-divider"><hr></div>
+
+    <div class="hiw-section">
+      <div class="hiw-section-title">🤖 Prediction Model Architecture</div>
+      <div class="hiw-section-sub">An XGBoost gradient-boosted tree model trained on 7 years of graph evolution to predict which topics will grow in importance by 2027.</div>
+
+      <div class="model-spec-grid">
+        <div class="model-spec"><div class="val">500</div><div class="lbl">Trees (Estimators)</div></div>
+        <div class="model-spec"><div class="val">6</div><div class="lbl">Max Tree Depth</div></div>
+        <div class="model-spec"><div class="val">0.05</div><div class="lbl">Learning Rate</div></div>
+        <div class="model-spec"><div class="val">16</div><div class="lbl">Input Features</div></div>
+        <div class="model-spec"><div class="val">~7,500</div><div class="lbl">Training Samples</div></div>
+        <div class="model-spec"><div class="val">0.8</div><div class="lbl">Subsample Ratio</div></div>
+      </div>
+
+      <div class="detail-text">
+        <strong style="color:var(--accent2)">How it works:</strong> For each node at year <em>t</em>, the model takes 16 graph metrics (PageRank, degree, betweenness, etc.) as input features and predicts that node's PageRank at year <em>t+1</em>. The model is trained on years 2020→2021, 2021→2022, ..., 2025→2026, then applied to 2026 features to forecast 2027.
+      </div>
+
+      <div class="detail-text" style="font-size: 11px; margin-top: 12px; background: rgba(64,150,255,0.05); padding: 12px; border-radius: 8px; border: 1px solid var(--rim2);">
+        <strong style="color:var(--accent2)">Model Parameters Explained:</strong>
+        <ul style="margin-left: 20px; margin-top: 6px; line-height: 1.6;">
+          <li><strong>Trees (500):</strong> The number of decision trees in the ensemble. More trees allow the model to learn complex patterns.</li>
+          <li><strong>Max Tree Depth (6):</strong> Limits how deep each tree can grow, preventing the model from simply memorizing the training data.</li>
+          <li><strong>Learning Rate (0.05):</strong> The step size during learning. A smaller value ensures steady, robust learning.</li>
+          <li><strong>Input Features (16):</strong> The 16 graph topology metrics used as clues to predict future importance.</li>
+          <li><strong>Training Samples (~7,500):</strong> Total historical node observations used to train the XGBoost algorithm.</li>
+          <li><strong>Subsample Ratio (0.8):</strong> The fraction of data randomly sampled for each tree, which helps prevent overfitting.</li>
+        </ul>
+      </div>
+
+      <div class="section-title" style="margin-top:20px">Feature Importance (from XGBoost)</div>
+      <div id="fi-bars"><!-- filled by JS --></div>
+
+      <div class="section-title" style="margin-top:24px">How Trend Labels Are Computed</div>
+      <div class="trend-explain">
+        <div class="trend-ex-card r"><div class="arrow" style="color:var(--rise)">↑</div><div class="name" style="color:var(--rise)">Rising</div><div class="rule">Predicted growth > +5%</div></div>
+        <div class="trend-ex-card s"><div class="arrow" style="color:var(--stable)">→</div><div class="name" style="color:var(--stable)">Stable</div><div class="rule">Growth between -5% and +5%</div></div>
+        <div class="trend-ex-card d"><div class="arrow" style="color:var(--fall)">↓</div><div class="name" style="color:var(--fall)">Declining</div><div class="rule">Predicted growth < -5%</div></div>
+      </div>
+
+      <div class="detail-text">
+        <strong style="color:var(--accent2)">Confidence scores</strong> are derived from the prediction score — higher prediction scores indicate stronger model certainty. A topic with many consistent graph-structural signals (growing degree, rising PageRank, increasing betweenness) receives higher confidence.
+      </div>
+    </div>
+
+    <div style="height:40px"></div>
+  </div>
+
+  <!-- PAGE 3: EMERGING TOPICS -->
+  <div class="page" id="page-predictions">
+    <div class="pred-hero">
+      <div class="pred-hero-text">
+        <h1>Emerging Topics <span>2027</span></h1>
+        <p id="pred-hero-desc">XGBoost model predictions based on 7 years of knowledge graph evolution</p>
+      </div>
+      <div class="pred-controls">
+        <button class="pred-filter-btn active" onclick="filterPreds('all')">All</button>
+        <button class="pred-filter-btn" onclick="filterPreds('rising')">↑ Rising</button>
+        <button class="pred-filter-btn" onclick="filterPreds('stable')">→ Stable</button>
+        <button class="pred-filter-btn" onclick="filterPreds('declining')">↓ Declining</button>
+      </div>
+    </div>
+    <div class="pred-content">
+      <div class="pred-list" id="pred-list"></div>
+      <div class="pred-detail" id="pred-detail"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tooltip -->
+<div id="tooltip">
+  <div class="tt-title" id="tt-title"></div>
+  <div class="tt-comm" id="tt-comm"></div>
+  <div class="tt-row"><span>PageRank</span><span class="tt-val" id="tt-pr"></span></div>
+  <div class="tt-row"><span>Degree</span><span class="tt-val" id="tt-deg"></span></div>
+  <div class="tt-row"><span>Community</span><span class="tt-val" id="tt-cs"></span></div>
+</div>
+
+<script>
+// ============================================================
+// NANOVERSE PORTAL — Data-driven from /data/*.json
+// ============================================================
+
+// Community color palette
+const COMM_COLORS = ['#F06292','#A5D6A7','#7986CB','#FFD54F','#4FC3F7','#FF8A65','#BA68C8','#4DB6AC','#E57373','#81C784','#64B5F6','#FFB74D','#9575CD','#4DD0E1','#AED581','#F48FB1','#CE93D8','#80DEEA','#FFCC80','#EF9A9A'];
+const DEFAULT_COLOR = '#90A4AE';
+
+// Global data store
+let PORTAL_DATA = null;
+const YEARS = [2020,2021,2022,2023,2024,2025,2026];
+
+// App state
+let currentYear = 2026, currentPage = 'universe', selectedNode = null;
+let showLabels = true, playing = false, playInterval = null;
+let panelActiveTab = 'overview', pipelineStep = 0, currentLevel = 'beginner';
+let predFilter = 'all', activePredIdx = 0, nodeCharts = {}, predCharts = {};
+let svg, g, simulation, zoomBehavior, nodeElements, linkElements, labelElements;
+let currentNodes = [], currentEdges = [];
+
+// ===== COSMIC BACKGROUND =====
+(function(){
+  const c=document.getElementById('cosmos'),x=c.getContext('2d');
+  let W,H,stars=[];
+  function resize(){W=c.width=innerWidth;H=c.height=innerHeight;}
+  function init(){stars=[];for(let i=0;i<200;i++)stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2,o:Math.random()*0.5+0.1,sp:Math.random()*0.3});}
+  let t=0;
+  function draw(){x.clearRect(0,0,W,H);t+=0.005;for(const s of stars){x.beginPath();x.arc(s.x,s.y,s.r,0,Math.PI*2);x.fillStyle=`rgba(180,210,255,${s.o*(0.7+0.3*Math.sin(t+s.x))})`;x.fill();}requestAnimationFrame(draw);}
+  addEventListener('resize',()=>{resize();init();});resize();init();draw();
+})();
+
+// ===== DATA LOADING =====
+function setLoaderMsg(msg, pct) {
+  document.getElementById('loader-status').textContent = msg;
+  document.getElementById('loader-bar').style.width = pct + '%';
+}
+
+async function loadAllData() {
+  try {
+    setLoaderMsg('Loading timeline data…', 10);
+    const timeline = await fetch('data/timeline.json').then(r=>r.json());
+    setLoaderMsg('Loading node lookup…', 30);
+    const nodeLookup = await fetch('data/node_lookup.json').then(r=>r.json());
+    setLoaderMsg('Loading communities…', 50);
+    const communities = await fetch('data/communities.json').then(r=>r.json());
+    setLoaderMsg('Loading feature importance…', 65);
+    const featureImp = await fetch('data/feature_importance.json').then(r=>r.json());
+    setLoaderMsg('Loading predictions…', 80);
+    const predictions = await fetch('data/predictions.json').then(r=>r.json());
+    setLoaderMsg('Building knowledge graph…', 90);
+    PORTAL_DATA = buildPortalData(timeline, nodeLookup, communities, featureImp, predictions);
+    setLoaderMsg('Rendering universe…', 100);
+    return true;
+  } catch(e) {
+    console.error('Data load failed:', e);
+    document.getElementById('loader-status').textContent = 'Error: serve via HTTP server (python -m http.server)';
+    return false;
+  }
+}
+
+function cleanCommunityName(label) {
+  if (!label) return 'Unknown';
+  let n = label.replace(/^Category:/i,'').trim();
+  if (/^articles|^all |^pages|^short desc|^commons|^redirect|^webarchive|^cs1/i.test(n)) return null;
+  return n.length > 35 ? n.slice(0,32)+'…' : n;
+}
+
+function buildPortalData(timeline, nodeLookup, communities, featureImp, predictions) {
+  const D = {};
+  D.years = YEARS;
+
+  // 1. Community map: id -> {name, color, node_count}
+  const sorted = [...communities].sort((a,b) => b.node_count - a.node_count);
+  const commMap = {};
+  let colorIdx = 0;
+  sorted.forEach(c => {
+    let name = null;
+    if (c.top_categories) {
+      for (let cat of c.top_categories) {
+        let n = cat.replace(/^Category:/i, '').trim();
+        if (!/^articles|^all |^pages|^short desc|^commons|^redirect|^webarchive|^cs1|^coordinates/i.test(n)) {
+          name = n.length > 35 ? n.slice(0,32) + '…' : n;
+          break;
+        }
+      }
+    }
+    if (!name && c.top_predicted_nodes && c.top_predicted_nodes.length > 0) {
+      name = c.top_predicted_nodes[0].title.slice(0,32);
+    }
+    if (!name) name = cleanCommunityName(c.community_label) || 'Cluster ' + c.community_id;
+    
+    const color = colorIdx < COMM_COLORS.length ? COMM_COLORS[colorIdx] : DEFAULT_COLOR;
+    commMap[c.community_id] = { id: c.community_id, name, color, node_count: c.node_count };
+    colorIdx++;
+  });
+
+  // 2. Node -> community_id from nodeLookup
+  const nodeCommId = {};
+  for (const [title, info] of Object.entries(nodeLookup)) {
+    nodeCommId[title] = info.community_id;
+  }
+
+  // 3. Build edges from nodeLookup connected_nodes (2026 topology)
+  const allEdges = [];
+  const edgeSet = new Set();
+  for (const [title, info] of Object.entries(nodeLookup)) {
+    if (info.connected_nodes) {
+      for (const cn of info.connected_nodes) {
+        const key = title + '→' + cn.title;
+        if (!edgeSet.has(key)) {
+          edgeSet.add(key);
+          allEdges.push({ source: title, target: cn.title });
+        }
+      }
+    }
+  }
+
+  // 4. Build graph_by_year from timeline
+  D.graph_by_year = {};
+  const allTitles = Object.keys(timeline);
+
+  for (const year of YEARS) {
+    const ys = String(year);
+    const nodes = [];
+    const titleSet = new Set();
+
+    for (const title of allTitles) {
+      const entry = timeline[title];
+      if (!entry.years || !entry.years[ys]) continue;
+      const yd = entry.years[ys];
+      const cid = nodeCommId[title] ?? 0;
+      const comm = commMap[cid] || { name:'Unknown', color: DEFAULT_COLOR, node_count:1 };
+      const cc = yd.clustering_coefficient ?? 0;
+      nodes.push({
+        page_id: entry.page_id, title: entry.title,
+        pagerank: yd.pagerank, in_degree: yd.in_degree, out_degree: yd.out_degree,
+        total_degree: yd.total_degree, betweenness_centrality: yd.betweenness_centrality,
+        closeness_centrality: yd.closeness_centrality, community_size: comm.node_count,
+        community_name: comm.name, community_color: comm.color, community_id: cid,
+        bridging_score: (yd.betweenness_centrality||0) * (1 - cc),
+        eigenvector_centrality: yd.eigenvector_centrality, katz_centrality: yd.katz_centrality,
+        clustering_coefficient: cc, authority_score: yd.authority_score, hub_score: yd.hub_score
+      });
+      titleSet.add(entry.title);
+    }
+
+    // Filter edges to nodes that exist this year
+    const edges = allEdges.filter(e => titleSet.has(e.source) && titleSet.has(e.target));
+
+    D.graph_by_year[ys] = { nodes, edges, total_nodes: nodes.length, total_edges: edges.length };
+  }
+
+  // 5. Communities for legend
+  D.communities = Object.values(commMap).sort((a,b) => b.node_count - a.node_count);
+
+  // 6. Feature importance
+  D.feature_importance = {};
+  featureImp.features.forEach(f => { D.feature_importance[f.feature_name] = f.importance; });
+
+  // 7. History per node
+  D.history = {};
+  for (const [title, entry] of Object.entries(timeline)) {
+    const years = [], pr = [], deg = [];
+    for (const y of YEARS) {
+      const yd = entry.years?.[String(y)];
+      if (yd) { years.push(y); pr.push(yd.pagerank); deg.push(yd.total_degree); }
+    }
+    if (years.length > 0) D.history[entry.title] = { years, pagerank: pr, total_degree: deg };
+  }
+
+  // 8. Predictions
+  D.predictions = predictions.map(p => {
+    const cid = p.community ?? 0;
+    const comm = commMap[cid] || { name:'Unknown', color: DEFAULT_COLOR };
+    const currentPR = p.pagerank || 0.000175;
+    const predictedPR = p.predicted_pagerank_next || currentPR;
+    const growth = currentPR > 0 ? (predictedPR - currentPR) / currentPR : 0;
+    const trend = growth > 0.05 ? 'rising' : growth < -0.05 ? 'declining' : 'stable';
+    const hist = D.history[p.title];
+    const lookupEntry = nodeLookup[p.title];
+    return {
+      title: p.title, predicted_pagerank: predictedPR, current_pagerank: currentPR,
+      predicted_growth: growth, trend, confidence: Math.min(0.95, 0.5 + p.prediction_score),
+      community_name: comm.name, community_color: comm.color,
+      in_degree: hist?.total_degree?.[hist.total_degree.length-1] || lookupEntry?.degree || 0,
+      betweenness: 0, prediction_score: p.prediction_score
+    };
+  }).sort((a,b) => b.prediction_score - a.prediction_score);
+
+  return D;
+}
+
+// ===== INIT =====
+async function boot() {
+  const ok = await loadAllData();
+  if (!ok) return;
+  setTimeout(() => {
+    const loader = document.getElementById('loader');
+    loader.style.opacity = '0';
+    setTimeout(() => { loader.style.display = 'none'; initApp(); }, 600);
+  }, 400);
+}
+
+function initApp() {
+  const totalNodes = PORTAL_DATA.graph_by_year['2026']?.total_nodes || 0;
+  document.getElementById('nav-status').textContent = `Live · 2020–2026 · ${totalNodes.toLocaleString()} Nodes`;
+  document.getElementById('pred-hero-desc').textContent =
+    `XGBoost model predictions based on 7 years of knowledge graph evolution · ${totalNodes.toLocaleString()} nodes · 16 graph features`;
+  setupSlider();
+  buildLegend();
+  initGraph();
+  selectStep(0);
+  renderFeatureImportanceBars();
+  renderPredictionsPage();
+  window.addEventListener('resize', () => {
+    if (!svg) return;
+    const W = document.getElementById('graph-container').clientWidth;
+    const H = document.getElementById('graph-container').clientHeight;
+    svg.attr('width', W).attr('height', H);
+    if (simulation) simulation.force('center', d3.forceCenter(W/2, H/2)).alpha(0.3).restart();
+  });
+}
+
+// ===== D3 GRAPH ENGINE =====
+function initGraph() {
+  const container = document.getElementById('graph-container');
+  const W = container.clientWidth, H = container.clientHeight;
+  svg = d3.select('#graph-canvas').attr('width', W).attr('height', H);
+  const defs = svg.append('defs');
+  const glow = defs.append('filter').attr('id','glow');
+  glow.append('feGaussianBlur').attr('stdDeviation','3').attr('result','coloredBlur');
+  const m = glow.append('feMerge'); m.append('feMergeNode').attr('in','coloredBlur'); m.append('feMergeNode').attr('in','SourceGraphic');
+  defs.append('marker').attr('id','arrow').attr('viewBox','0 -4 8 8').attr('refX',14).attr('refY',0)
+    .attr('markerWidth',6).attr('markerHeight',6).attr('orient','auto')
+    .append('path').attr('d','M0,-4L8,0L0,4').attr('fill','rgba(64,150,255,0.4)');
+  zoomBehavior = d3.zoom().scaleExtent([0.1,8]).on('zoom', e => g.attr('transform', e.transform));
+  svg.call(zoomBehavior);
+  g = svg.append('g');
+  g.append('g').attr('class','links-layer');
+  g.append('g').attr('class','nodes-layer');
+  g.append('g').attr('class','labels-layer');
+  loadYearGraph(2026);
+}
+
+function loadYearGraph(year) {
+  const yd = PORTAL_DATA.graph_by_year[String(year)];
+  if (!yd) return;
+  const nodeMap = {};
+  yd.nodes.forEach(n => { nodeMap[n.title] = n; });
+  const nodes = yd.nodes.map(n => ({
+    id: n.title, ...n,
+    x: currentNodes.find(cn => cn.id === n.title)?.x,
+    y: currentNodes.find(cn => cn.id === n.title)?.y,
+  }));
+  const titleSet = new Set(nodes.map(n => n.id));
+  const edges = yd.edges.filter(e => titleSet.has(e.source) && titleSet.has(e.target)).map(e => ({source:e.source,target:e.target}));
+  currentNodes = nodes; currentEdges = edges;
+  renderGraph(nodes, edges);
+  updateStats(year, yd);
+}
+
+function prScale(pr) { return Math.max(4, Math.min(24, Math.sqrt(pr * 40000) * 2)); }
+
+function renderGraph(nodes, edges) {
+  const W = document.getElementById('graph-container').clientWidth;
+  const H = document.getElementById('graph-container').clientHeight;
+  if (simulation) simulation.stop();
+  simulation = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(edges).id(d=>d.id).distance(d => 40+80/(1+(d.source.pagerank||0.001)*1000)).strength(0.4))
+    .force('charge', d3.forceManyBody().strength(d => -60 - prScale(d.pagerank||0.001)*4))
+    .force('center', d3.forceCenter(W/2, H/2))
+    .force('collision', d3.forceCollide().radius(d => prScale(d.pagerank||0.001)+3))
+    .alphaDecay(0.015);
+
+  const linksL = g.select('.links-layer'); linksL.selectAll('*').remove();
+  linkElements = linksL.selectAll('line').data(edges).join('line').attr('stroke','rgba(64,150,255,0.12)').attr('stroke-width',1);
+
+  const nodesL = g.select('.nodes-layer'); nodesL.selectAll('*').remove();
+  const ng = nodesL.selectAll('g.node').data(nodes,d=>d.id).join('g').attr('class','node').style('cursor','pointer')
+    .call(d3.drag().on('start',(e,d)=>{if(!e.active)simulation.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y;})
+      .on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y;}).on('end',(e,d)=>{if(!e.active)simulation.alphaTarget(0);d.fx=null;d.fy=null;}))
+    .on('mouseover',showTooltip).on('mousemove',moveTooltip).on('mouseout',hideTooltip)
+    .on('click',(e,d)=>{e.stopPropagation();selectNode(d);});
+
+  ng.append('circle').attr('r',d=>prScale(d.pagerank||0.001)+4).attr('fill',d=>d.community_color||'#4096ff').attr('opacity',0.12);
+  ng.append('circle').attr('r',d=>prScale(d.pagerank||0.001)).attr('fill',d=>d.community_color||'#4096ff').attr('opacity',0.85)
+    .attr('filter',d=>prScale(d.pagerank||0.001)>10?'url(#glow)':null).attr('stroke',d=>d.community_color||'#4096ff').attr('stroke-width',0.5).attr('stroke-opacity',0.6);
+  ng.filter(d=>prScale(d.pagerank||0.001)>8).append('circle').attr('r',2.5).attr('fill','rgba(255,255,255,0.9)');
+  nodeElements = ng;
+
+  const labelsL = g.select('.labels-layer'); labelsL.selectAll('*').remove();
+  labelElements = labelsL.selectAll('text').data(nodes.filter(d=>prScale(d.pagerank||0.001)>7)).join('text')
+    .text(d=>d.title.length>22?d.title.slice(0,22)+'…':d.title)
+    .attr('font-size',d=>Math.max(8,Math.min(12,prScale(d.pagerank||0.001)*0.8)))
+    .attr('fill','rgba(200,216,240,0.85)').attr('text-anchor','middle').attr('dy',d=>prScale(d.pagerank||0.001)+12)
+    .attr('pointer-events','none').attr('font-family','var(--sans)').attr('display',showLabels?'block':'none');
+
+  simulation.on('tick',()=>{
+    linkElements.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    nodeElements.attr('transform',d=>`translate(${d.x},${d.y})`);
+    labelElements.attr('transform',d=>`translate(${d.x},${d.y})`);
+  });
+  svg.on('click',()=>deselectNode());
+}
+
+function showTooltip(e,d){const t=document.getElementById('tooltip');document.getElementById('tt-title').textContent=d.title;document.getElementById('tt-comm').textContent=d.community_name||'—';document.getElementById('tt-pr').textContent=(d.pagerank||0).toFixed(5);document.getElementById('tt-deg').textContent=d.total_degree||0;document.getElementById('tt-cs').textContent=d.community_size||'—';t.style.display='block';moveTooltip(e);}
+function moveTooltip(e){const t=document.getElementById('tooltip');t.style.left=(e.clientX+14)+'px';t.style.top=(e.clientY-10)+'px';}
+function hideTooltip(){document.getElementById('tooltip').style.display='none';}
+
+function selectNode(d){
+  selectedNode=d;
+  nodeElements.selectAll('circle:first-child').attr('opacity',n=>{
+    if(n.id===d.id)return 0.4;
+    return currentEdges.some(e=>(e.source.id===d.id&&e.target.id===n.id)||(e.target.id===d.id&&e.source.id===n.id))?0.25:0.05;
+  });
+  nodeElements.selectAll('circle:nth-child(2)').attr('opacity',n=>{
+    if(n.id===d.id)return 1;
+    return currentEdges.some(e=>(e.source.id===d.id&&e.target.id===n.id)||(e.target.id===d.id&&e.source.id===n.id))?0.7:0.2;
+  });
+  linkElements.attr('stroke',e=>{const s=typeof e.source==='object'?e.source.id:e.source;const t=typeof e.target==='object'?e.target.id:e.target;return(s===d.id||t===d.id)?'rgba(0,229,255,0.6)':'rgba(64,150,255,0.04)';})
+    .attr('stroke-width',e=>{const s=typeof e.source==='object'?e.source.id:e.source;const t=typeof e.target==='object'?e.target.id:e.target;return(s===d.id||t===d.id)?1.5:0.5;});
+  openPanel(d);
+}
+function deselectNode(){selectedNode=null;if(nodeElements){nodeElements.selectAll('circle:first-child').attr('opacity',0.12);nodeElements.selectAll('circle:nth-child(2)').attr('opacity',0.85);}if(linkElements)linkElements.attr('stroke','rgba(64,150,255,0.12)').attr('stroke-width',1);closePanel();}
+
+// ===== NODE PANEL =====
+function openPanel(d){document.getElementById('node-panel').classList.add('open');document.getElementById('panel-title').textContent=d.title;const cb=document.getElementById('panel-community');cb.textContent=d.community_name||'—';cb.style.background=(d.community_color||'#4096ff')+'22';cb.style.color=d.community_color||'#4096ff';cb.style.border=`1px solid ${(d.community_color||'#4096ff')}44`;renderPanelTab(panelActiveTab,d);}
+function closePanel(){document.getElementById('node-panel').classList.remove('open');selectedNode=null;if(nodeElements){nodeElements.selectAll('circle:first-child').attr('opacity',0.12);nodeElements.selectAll('circle:nth-child(2)').attr('opacity',0.85);}if(linkElements)linkElements.attr('stroke','rgba(64,150,255,0.12)').attr('stroke-width',1);}
+function switchPanelTab(tab){panelActiveTab=tab;document.querySelectorAll('.panel-tab').forEach(t=>t.classList.toggle('active',t.dataset.ptab===tab));if(selectedNode)renderPanelTab(tab,selectedNode);}
+
+function renderPanelTab(tab,d){
+  const body=document.getElementById('panel-body');
+  Object.values(nodeCharts).forEach(c=>{try{c.destroy();}catch(e){}});nodeCharts={};
+  const history=PORTAL_DATA.history[d.title]||null;
+  const pred=PORTAL_DATA.predictions.find(p=>p.title===d.title)||null;
+  const growth=pred?pred.predicted_growth:0;
+  const trend=pred?pred.trend:'stable';
+  if(tab==='overview'){
+    const tIcon=trend==='rising'?'↑':trend==='declining'?'↓':'→';
+    body.innerHTML=`
+      <div class="trend-badge ${trend}">${tIcon} ${trend.toUpperCase()}${pred?` · ${(Math.abs(growth)*100).toFixed(1)}% predicted ${trend==='rising'?'growth':trend==='declining'?'decline':'change'}`:''}</div>
+      <div class="section-title">Influence Score (PageRank)</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+        <div style="font-family:var(--mono);font-size:22px;font-weight:800;color:var(--accent2)">${((d.pagerank||0)*10000).toFixed(2)}</div>
+        <div style="font-size:10px;color:var(--text-dim)">× 10⁻⁴ influence units</div>
+      </div>
+      <div class="section-title">Quick Stats</div>
+      <div class="metric-grid">
+        <div class="metric-card"><div class="metric-val">${d.in_degree||0}</div><div class="metric-lbl">In-Links</div></div>
+        <div class="metric-card"><div class="metric-val">${d.out_degree||0}</div><div class="metric-lbl">Out-Links</div></div>
+        <div class="metric-card"><div class="metric-val">${((d.betweenness_centrality||0)*100).toFixed(2)}%</div><div class="metric-lbl">Betweenness</div></div>
+        <div class="metric-card"><div class="metric-val">${d.community_name||'—'}</div><div class="metric-lbl">Community</div></div>
+      </div>
+      <div class="section-title">AI Analysis</div>
+      <div class="insight-card">${generateNodeDesc(d,pred)}</div>`;
+  } else if(tab==='metrics'){
+    body.innerHTML=`
+      <div class="section-title">Centrality Metrics</div>
+      <div class="metric-grid">
+        <div class="metric-card"><div class="metric-val">${((d.pagerank||0)*10000).toFixed(3)}</div><div class="metric-lbl">PageRank ×10⁻⁴</div></div>
+        <div class="metric-card"><div class="metric-val">${((d.betweenness_centrality||0)*100).toFixed(3)}%</div><div class="metric-lbl">Betweenness</div></div>
+        <div class="metric-card"><div class="metric-val">${(d.closeness_centrality||0).toFixed(4)}</div><div class="metric-lbl">Closeness</div></div>
+        <div class="metric-card"><div class="metric-val">${((d.bridging_score||0)*10000).toFixed(3)}</div><div class="metric-lbl">Bridging ×10⁻⁴</div></div>
+      </div>
+      <div class="section-title">Degree Distribution</div>
+      <div class="metric-grid">
+        <div class="metric-card"><div class="metric-val">${d.in_degree||0}</div><div class="metric-lbl">In-Degree</div></div>
+        <div class="metric-card"><div class="metric-val">${d.out_degree||0}</div><div class="metric-lbl">Out-Degree</div></div>
+        <div class="metric-card"><div class="metric-val">${d.total_degree||0}</div><div class="metric-lbl">Total Degree</div></div>
+        <div class="metric-card"><div class="metric-val">${d.community_size||'—'}</div><div class="metric-lbl">Community Size</div></div>
+      </div>
+      <div class="section-title">What These Mean</div>
+      <div class="insight-card"><strong style="color:var(--accent2)">PageRank:</strong> How important based on links from other important topics.<br><br><strong style="color:var(--accent2)">Betweenness:</strong> How often on shortest paths — high = bridge node.<br><br><strong style="color:var(--accent2)">Bridging Score:</strong> Composite of betweenness and low clustering — true interdisciplinary connectors.</div>`;
+  } else if(tab==='history'){
+    body.innerHTML=`<div class="section-title">PageRank Evolution (2020–2026)</div><div class="panel-chart-wrap"><canvas id="pr-chart"></canvas></div><div class="section-title">Degree Evolution</div><div class="panel-chart-wrap"><canvas id="deg-chart"></canvas></div>`;
+    if(history){setTimeout(()=>{
+      const prCtx=document.getElementById('pr-chart');
+      if(prCtx) nodeCharts.pr=new Chart(prCtx,{type:'line',data:{labels:history.years,datasets:[{label:'PageRank',data:history.pagerank.map(v=>(v*10000).toFixed(4)),borderColor:'#4096ff',backgroundColor:'rgba(64,150,255,0.1)',fill:true,tension:0.4,pointRadius:4,pointBackgroundColor:'#4096ff'}]},options:chartOpts('PageRank ×10⁻⁴')});
+      const degCtx=document.getElementById('deg-chart');
+      if(degCtx) nodeCharts.deg=new Chart(degCtx,{type:'line',data:{labels:history.years,datasets:[{label:'Total Degree',data:history.total_degree,borderColor:'#00e5ff',backgroundColor:'rgba(0,229,255,0.08)',fill:true,tension:0.4,pointRadius:4,pointBackgroundColor:'#00e5ff'}]},options:chartOpts('Connections')});
+    },50);}else{body.innerHTML+='<div class="insight-card" style="margin-top:8px">Historical data not available for this node.</div>';}
+  } else if(tab==='forecast'){
+    body.innerHTML=`<div class="section-title">2027 Forecast</div>${pred?`
+      <div class="trend-badge ${trend}">${trend==='rising'?'↑':trend==='declining'?'↓':'→'} ${trend.toUpperCase()} TRAJECTORY</div>
+      <div class="metric-grid">
+        <div class="metric-card"><div class="metric-val">${((pred.current_pagerank||d.pagerank)*10000).toFixed(3)}</div><div class="metric-lbl">2026 PR ×10⁻⁴</div></div>
+        <div class="metric-card"><div class="metric-val">${(pred.predicted_pagerank*10000).toFixed(3)}</div><div class="metric-lbl">2027 Pred ×10⁻⁴</div></div>
+        <div class="metric-card"><div class="metric-val" style="color:${growth>0?'var(--rise)':growth<0?'var(--fall)':'var(--stable)'}">${growth>0?'+':''}${(growth*100).toFixed(1)}%</div><div class="metric-lbl">Change</div></div>
+        <div class="metric-card"><div class="metric-val">${(pred.confidence*100).toFixed(0)}%</div><div class="metric-lbl">Confidence</div></div>
+      </div>`:`<div class="insight-card">Prediction data not available.</div>`}
+      <div class="section-title">Confidence</div>${pred?`<div style="margin-bottom:16px"><div class="feat-bar-track" style="height:8px;border-radius:4px"><div class="feat-bar-fill" style="width:${(pred.confidence*100).toFixed(0)}%"></div></div><div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:var(--text-dim)"><span>Low</span><span>High</span></div></div>`:``}
+      <div class="section-title">Why This Prediction?</div><div class="insight-card">${generateForecastInsight(d,pred,history)}</div>`;
+  }
+}
+
+function generateNodeDesc(d,pred){
+  const rank=d.pagerank>0.01?"one of the highest-influence":d.pagerank>0.005?"a high-influence":"a moderate-influence";
+  const deg=d.total_degree>50?"extremely well-connected":d.total_degree>20?"well-connected":"moderately connected";
+  const bridge=d.betweenness_centrality>0.02?"a critical bridge between communities":"part of a focused knowledge cluster";
+  let td="";if(pred){const g=pred.predicted_growth;if(g>0.2)td=` The model predicts <strong style="color:var(--rise)">significant growth of ${(g*100).toFixed(0)}%</strong> by 2027.`;else if(g>0.05)td=` The model expects <strong style="color:var(--rise)">moderate growth</strong> through 2027.`;else if(g<-0.1)td=` The model projects <strong style="color:var(--fall)">declining influence</strong>.`;else td=` The model forecasts <strong style="color:var(--stable)">stable influence</strong> through 2027.`;}
+  return `<strong style="color:var(--accent2)">${d.title}</strong> is ${rank} node in the nanotechnology knowledge graph. It is ${deg} with ${d.total_degree||0} total connections and serves as ${bridge}.${td}`;
+}
+function generateForecastInsight(d,pred,history){
+  if(!pred)return "No prediction available.";const parts=[];
+  if(d.in_degree>30)parts.push(`High in-degree (${d.in_degree}) suggests sustained attention.`);
+  if(d.betweenness_centrality>0.01)parts.push('Strong betweenness indicates it bridges multiple communities.');
+  if(history&&history.pagerank.length>1){const r=history.pagerank[history.pagerank.length-1],p=history.pagerank[history.pagerank.length-2];if(r>p)parts.push(`PageRank grew +${((r-p)/p*100).toFixed(1)}% in the past year.`);}
+  if(parts.length===0)parts.push("Prediction based on current PageRank, degree centrality, and historical growth patterns.");
+  return parts.join('<br><br>');
+}
+function chartOpts(label){return{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(11,22,40,0.95)',borderColor:'rgba(64,150,255,0.3)',borderWidth:1,titleColor:'#c8d8f0',bodyColor:'#90caf9'}},scales:{x:{grid:{color:'rgba(64,150,255,0.06)'},ticks:{color:'#5a7499',font:{size:10}}},y:{grid:{color:'rgba(64,150,255,0.06)'},ticks:{color:'#5a7499',font:{size:10}},title:{display:true,text:label,color:'#5a7499',font:{size:9}}}}};}
+
+// ===== SLIDER =====
+function setupSlider(){const sl=document.getElementById('year-slider'),mk=document.getElementById('year-marks');YEARS.forEach((y,i)=>{const m=document.createElement('div');m.className='year-mark'+(y===2026?' active-mark':'');m.textContent=y;m.onclick=()=>{sl.value=i;onSliderChange(i);};mk.appendChild(m);});updateSliderBg(6);}
+function onSliderChange(v){const i=parseInt(v);currentYear=YEARS[i];document.getElementById('year-display').textContent=currentYear;document.querySelectorAll('.year-mark').forEach((m,j)=>m.classList.toggle('active-mark',j===i));updateSliderBg(i);loadYearGraph(currentYear);if(selectedNode)closePanel();}
+function updateSliderBg(i){document.getElementById('year-slider').style.setProperty('--pct',(i/6*100)+'%');}
+function togglePlay(){playing=!playing;const btn=document.getElementById('play-btn');if(playing){btn.textContent='⏸';let i=parseInt(document.getElementById('year-slider').value);playInterval=setInterval(()=>{i=(i+1)%YEARS.length;document.getElementById('year-slider').value=i;onSliderChange(i);if(i===YEARS.length-1)togglePlay();},1200);}else{btn.textContent='▶';clearInterval(playInterval);}}
+function updateStats(year,yd){document.getElementById('stat-nodes').textContent=yd.total_nodes;document.getElementById('stat-edges').textContent=yd.total_edges;const uc=new Set(yd.nodes.map(n=>n.community_id)).size;document.getElementById('stat-comms').textContent=uc;const dens=yd.total_nodes>1?(2*yd.total_edges/(yd.total_nodes*(yd.total_nodes-1))*1000).toFixed(3):'0';document.getElementById('stat-density').textContent=dens+'‰';}
+
+// ===== ZOOM / SEARCH / LEGEND =====
+function zoomIn(){svg.transition().call(zoomBehavior.scaleBy,1.4);}
+function zoomOut(){svg.transition().call(zoomBehavior.scaleBy,0.7);}
+function resetView(){const c=document.getElementById('graph-container');svg.transition().duration(600).call(zoomBehavior.transform,d3.zoomIdentity.translate(c.clientWidth/2,c.clientHeight/2).scale(0.8).translate(-c.clientWidth/2,-c.clientHeight/2));}
+function toggleLabels(){showLabels=!showLabels;document.getElementById('label-btn').style.color=showLabels?'':'var(--text-dim)';if(labelElements)labelElements.attr('display',showLabels?'block':'none');}
+let searchTimeout;
+function handleSearch(val){clearTimeout(searchTimeout);const r=document.getElementById('search-results');if(!val.trim()){r.style.display='none';return;}searchTimeout=setTimeout(()=>{const q=val.toLowerCase(),matches=currentNodes.filter(n=>n.title.toLowerCase().includes(q)).slice(0,8);if(!matches.length){r.style.display='none';return;}r.innerHTML=matches.map(n=>`<div class="search-result-item" onmousedown="focusNode('${n.id.replace(/'/g,"\\'")}')""><div class="sri-dot" style="background:${n.community_color}"></div><span>${n.title}</span></div>`).join('');r.style.display='block';},150);}
+function showResults(){}
+function hideResults(){setTimeout(()=>{document.getElementById('search-results').style.display='none';},200);}
+function focusNode(id){const n=currentNodes.find(x=>x.id===id);if(!n)return;document.getElementById('search-input').value=n.title;document.getElementById('search-results').style.display='none';const c=document.getElementById('graph-container');svg.transition().duration(800).call(zoomBehavior.transform,d3.zoomIdentity.translate(c.clientWidth/2-n.x*1.5,c.clientHeight/2-n.y*1.5).scale(1.5));selectNode(n);}
+function buildLegend(){const el=document.getElementById('legend-items');const comms=PORTAL_DATA.communities.slice(0,8);el.innerHTML=comms.map(c=>`<div class="legend-item" onclick="filterCommunity(${c.id})"><div class="legend-dot" style="background:${c.color}"></div><div class="legend-lbl">${c.name.split(' ').slice(0,3).join(' ')}</div></div>`).join('');}
+function filterCommunity(cid){if(nodeElements)nodeElements.selectAll('circle:nth-child(2)').attr('opacity',d=>d.community_id===cid?1:0.12);}
+
+// ===== PAGE NAV =====
+function switchPage(page){currentPage=page;document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav-tab').forEach(t=>t.classList.toggle('active',t.dataset.page===page));document.getElementById('page-'+page).classList.add('active');if(page==='predictions')renderPredictionsPage();}
+
+// ===== PAGE 2: PIPELINE CONTENT =====
+const PIPELINE = {
+  0:{icon:'📚',title:'Wikipedia Data Source',subtitle:'Harvesting the living encyclopedia of science',
+    beginner:'<p class="detail-text">Wikipedia is like a giant web of knowledge where every article links to related articles. We collected <strong>1,621 Wikipedia pages</strong> related to nanotechnology — from "Carbon nanotube" to "DNA origami" to "Richard Feynman."</p>',
+    professional:'<p class="detail-text">We harvested Wikipedia\'s revision history API to capture the nanotechnology article ecosystem at yearly intervals from 2020–2026. Our scope: 1,621 unique pages spanning nanomaterials, biophysics, and quantum technology, using BFS traversal to depth 3 from seed articles.</p>',
+    technical:'<p class="detail-text"><code style="color:var(--accent2)">WikiScrape.py</code> uses MediaWiki REST API: <code>action=query&prop=revisions&rvprop=content&rvstart={year}-12-31</code>. Pages fetched at latest revision before Dec 31st. Link extraction via regex on wikitext. Master list: <code>master_pages.json</code> (1,621 entries).</p>',
+    concepts:['nodes','links']},
+  1:{icon:'📸',title:'Historical Snapshots',subtitle:'7 years of knowledge evolution captured',
+    beginner:'<p class="detail-text">Imagine photographing Wikipedia every year. Each snapshot captures what scientists knew at that moment. Comparing 7 annual snapshots (2020–2026) reveals which topics grew and which faded.</p>',
+    professional:'<p class="detail-text">Each annual snapshot captures Wikipedia article topology at year-end. Node counts grew from ~1,433 (2020) to 1,621 (2026), reflecting nanotechnology knowledge expansion. JSON files encode each page\'s wikilinks for graph reconstruction.</p>',
+    technical:'<p class="detail-text">Snapshots: <code>data-prep/Yearly snapshot data/{year}.json</code>. Schema: <code>{page_title: {links: [str], categories: [str], revision_id: int}}</code>. Graph reconstruction via <code>constructGraphs.py</code>.</p>'},
+  2:{icon:'🕸️',title:'Graph Construction',subtitle:'Transforming text into a mathematical universe',
+    beginner:'<p class="detail-text">Every article becomes a <strong>node</strong> (point). Every link becomes an <strong>edge</strong> (connection). Topics linked by many others are clearly important. The graph reveals structure invisible in raw text.</p>',
+    professional:'<p class="detail-text">Directed graphs via NetworkX: nodes = articles, edges = hyperlinks. Each year: ~1,400–1,600 nodes, ~2,900–3,500 edges. Communities detected via Louvain algorithm. Year-over-year membership tracking.</p>',
+    technical:'<p class="detail-text"><code>make_graph.py</code> → <code>networkx.DiGraph()</code>. Community detection: <code>community.best_partition()</code> (Louvain, undirected projection). Output: <code>{year}_edges.csv</code>, <code>{year}_nodes.csv</code>.</p>'},
+  3:{icon:'📊',title:'Graph Analytics',subtitle:'16 metrics that reveal hidden influence',
+    beginner:'<p class="detail-text"><strong>PageRank</strong> tells us which topics are most influential. <strong>Betweenness</strong> tells us which topics are "bridges" between research areas. Together, 16 metrics create a complete fingerprint of each topic\'s position in science.</p>',
+    professional:'<p class="detail-text">16 metrics per node per year: PageRank, betweenness/closeness/eigenvector/Katz centrality, hub/authority scores (HITS), clustering coefficient, core number, average neighbor degree & PageRank, community size, and bridging score.</p>',
+    technical:'<p class="detail-text"><code>featuresExtract.py</code>: PR via <code>nx.pagerank(G, alpha=0.85)</code>, betweenness via <code>nx.betweenness_centrality(G, normalized=True)</code>, HITS via <code>nx.hits(G)</code>. Bridging = betweenness × (1 - clustering). Output: <code>{year}_features.csv</code>.</p>',
+    fi:true},
+  4:{icon:'🤖',title:'XGBoost Forecasting',subtitle:'ML on graph topology patterns',
+    beginner:'<p class="detail-text">Our AI learned to spot patterns: what does a topic look like the year before it becomes important? By studying 7 years, the model learned that certain connection patterns predict future importance — like a scout predicting rising stars.</p>',
+    professional:'<p class="detail-text">XGBoost regressor trained on temporal features from 2020–2025, predicting next-year PageRank. ~7,500 node-year samples. 16 graph metrics plus temporal growth features. Target: PageRank at t+1.</p>',
+    technical:'<p class="detail-text"><code>XGBRegressor(n_estimators=500, learning_rate=0.05, max_depth=6, subsample=0.8, colsample_bytree=0.8)</code>. Train on years≤2025, predict 2026→2027.</p>',
+    fi:true},
+  5:{icon:'🔮',title:'2027 Predictions',subtitle:'The emerging frontier of nanotechnology',
+    beginner:'<p class="detail-text">The model analyzed every topic and predicted which will grow by 2027 — based purely on graph structure, not content. Topics currently gaining connections and bridging more communities are predicted to rise.</p>',
+    professional:'<p class="detail-text">Applying the trained model to 2026 features generates predicted 2027 PageRanks for all nodes. Top risers reflect structural momentum in the knowledge graph topology.</p>',
+    technical:'<p class="detail-text">Inference: <code>model.predict(X_2026)</code>. Growth = <code>(predicted - current) / current</code>. Confidence from prediction variance. Output: <code>predictions_2027.csv</code>.</p>'}
+};
+const CONCEPTS = {
+  nodes:{title:'What is a Node?',text:'A node represents one Wikipedia article — one concept in nanotechnology. Example: "Graphene", "Nanomedicine".'},
+  links:{title:'What is an Edge?',text:'An edge is a hyperlink between two articles. If "Graphene" links to "Carbon nanotube", that\'s a directed edge.'}
+};
+
+function setLevel(level){currentLevel=level;document.querySelectorAll('.level-btn').forEach(b=>b.classList.toggle('active',b.textContent.toLowerCase()===level));selectStep(pipelineStep);}
+function selectStep(idx){
+  pipelineStep=idx;document.querySelectorAll('.pipeline-step').forEach((s,i)=>s.classList.toggle('active',i===idx));
+  const data=PIPELINE[idx];if(!data)return;
+  const conceptHtml=(data.concepts||[]).map(k=>{const c=CONCEPTS[k];return c?`<div class="concept-card"><div class="concept-title">${c.title}</div><div class="concept-text">${c.text}</div></div>`:''}).join('');
+  const fiHtml=data.fi&&PORTAL_DATA?`<div class="section-title" style="margin-top:20px">Feature Importance (XGBoost)</div>${Object.entries(PORTAL_DATA.feature_importance).map(([k,v])=>`<div class="feat-bar-row"><div class="feat-bar-label">${k.replace(/_/g,' ')}</div><div class="feat-bar-track"><div class="feat-bar-fill" style="width:${(v/0.09*100).toFixed(1)}%"></div></div><div class="feat-bar-pct">${(v*100).toFixed(1)}%</div></div>`).join('')}`:'';
+  document.getElementById('pipeline-detail').innerHTML=`<div class="detail-panel fade-in" style="display:block"><div class="detail-header"><div class="detail-icon">${data.icon}</div><div><div class="detail-title">${data.title}</div><div class="detail-subtitle">${data.subtitle}</div></div></div><div>${data[currentLevel]||data.beginner}</div>${fiHtml}${conceptHtml?`<div class="concepts-grid">${conceptHtml}</div>`:''}</div>`;
+}
+function renderFeatureImportanceBars(){
+  if(!PORTAL_DATA)return;
+  const el=document.getElementById('fi-bars');
+  el.innerHTML=Object.entries(PORTAL_DATA.feature_importance).map(([k,v])=>`<div class="feat-bar-row"><div class="feat-bar-label">${k.replace(/_/g,' ')}</div><div class="feat-bar-track"><div class="feat-bar-fill" style="width:${(v/0.09*100).toFixed(1)}%"></div></div><div class="feat-bar-pct">${(v*100).toFixed(1)}%</div></div>`).join('');
+}
+
+// ===== PAGE 3: PREDICTIONS =====
+let allPredictions=[];
+function renderPredictionsPage(){allPredictions=PORTAL_DATA.predictions;renderPredList(allPredictions);selectPrediction(0);}
+function filterPreds(filter){predFilter=filter;document.querySelectorAll('.pred-filter-btn').forEach(b=>b.classList.toggle('active',b.textContent.toLowerCase().includes(filter)||(filter==='all'&&b.textContent==='All')));const f=filter==='all'?allPredictions:allPredictions.filter(p=>p.trend===filter);renderPredList(f);if(f.length>0)selectPrediction(0);}
+function renderPredList(preds){document.getElementById('pred-list').innerHTML=preds.map((p,i)=>`<div class="pred-card ${i===0?'active':''}" onclick="selectPrediction(${i})" data-idx="${i}"><div class="pred-rank ${i<3?'top3':''}">${i+1}</div><div class="pred-info"><div class="pred-title">${p.title}</div><div class="pred-meta">${p.community_name}</div></div><div class="pred-score"><div class="pred-score-val">${(p.predicted_pagerank*10000).toFixed(2)}</div><div class="pred-trend-pill ${p.trend}">${p.trend==='rising'?'↑':p.trend==='declining'?'↓':'→'} ${p.trend}</div></div></div>`).join('');}
+function selectPrediction(idx){
+  activePredIdx=idx;document.querySelectorAll('.pred-card').forEach((c,i)=>c.classList.toggle('active',i===idx));
+  const filtered=predFilter==='all'?allPredictions:allPredictions.filter(p=>p.trend===predFilter);
+  const p=filtered[idx];if(!p)return;
+  Object.values(predCharts).forEach(c=>{try{c.destroy();}catch(e){}});predCharts={};
+  const history=PORTAL_DATA.history[p.title];
+  const tIcon=p.trend==='rising'?'↑':p.trend==='declining'?'↓':'→';
+  const tColor=p.trend==='rising'?'#00e5a0':p.trend==='declining'?'#ff5252':'#90caf9';
+  const evidence=genEvidence(p,history);
+  document.getElementById('pred-detail').innerHTML=`
+    <div class="fade-in"><div class="pred-detail-title">${p.title}</div>
+    <div class="pred-detail-community" style="background:${p.community_color}22;color:${p.community_color};border:1px solid ${p.community_color}44">${p.community_name}</div>
+    <div class="trend-badge ${p.trend}" style="margin-bottom:0">${tIcon} ${p.trend.toUpperCase()} TRAJECTORY</div></div>
+    <div class="pred-score-grid" style="margin-top:16px">
+      <div class="pred-score-card"><div class="val">#${idx+1}</div><div class="lbl">Predicted Rank</div></div>
+      <div class="pred-score-card"><div class="val">${(p.predicted_pagerank*10000).toFixed(3)}</div><div class="lbl">2027 PR ×10⁻⁴</div></div>
+      <div class="pred-score-card"><div class="val" style="color:${tColor}">${p.predicted_growth>0?'+':''}${(p.predicted_growth*100).toFixed(1)}%</div><div class="lbl">Predicted Growth</div></div>
+      <div class="pred-score-card"><div class="val">${(p.confidence*100).toFixed(0)}%</div><div class="lbl">Confidence</div></div>
+    </div>
+    <div style="margin-bottom:16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim)">PageRank Trajectory (2020–2027)</div>
+    <div class="pred-chart-wrap"><canvas id="pred-trend-chart"></canvas></div>
+    <div style="margin-bottom:12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);margin-top:16px">Why This Topic Is Predicted To ${p.trend==='rising'?'Rise':p.trend==='declining'?'Decline':'Hold Steady'}</div>
+    <ul class="evidence-list">${evidence.map(e=>`<li class="evidence-item"><div class="evidence-bullet"></div><span>${e}</span></li>`).join('')}</ul>`;
+  setTimeout(()=>{
+    const ctx=document.getElementById('pred-trend-chart');if(!ctx)return;
+    const years=history?history.years:YEARS;
+    const prH=history?history.pagerank.map(v=>(v*10000).toFixed(4)):[];
+    const predVal=(p.predicted_pagerank*10000).toFixed(4);
+    predCharts.trend=new Chart(ctx,{type:'line',data:{labels:[...years,2027],datasets:[
+      {label:'Historical',data:[...prH,null],borderColor:'#4096ff',backgroundColor:'rgba(64,150,255,0.1)',fill:true,tension:0.4,pointRadius:4,pointBackgroundColor:'#4096ff'},
+      {label:'2027 Prediction',data:[...new Array(years.length).fill(null),predVal],borderColor:tColor,backgroundColor:'transparent',borderDash:[6,3],pointRadius:8,pointBackgroundColor:tColor,pointBorderColor:'#03050d',pointBorderWidth:2}
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#5a7499',font:{size:10},boxWidth:12}},tooltip:{backgroundColor:'rgba(11,22,40,0.95)',borderColor:'rgba(64,150,255,0.3)',borderWidth:1,titleColor:'#c8d8f0',bodyColor:'#90caf9'}},scales:{x:{grid:{color:'rgba(64,150,255,0.06)'},ticks:{color:'#5a7499',font:{size:10}}},y:{grid:{color:'rgba(64,150,255,0.06)'},ticks:{color:'#5a7499',font:{size:10}},title:{display:true,text:'PageRank ×10⁻⁴',color:'#5a7499',font:{size:9}}}}}});
+  },50);
+}
+function genEvidence(p,history){
+  const ev=[];
+  if(p.in_degree>35)ev.push(`<strong>High citation rate:</strong> ${p.in_degree} connections indicate widespread relevance.`);
+  else if(p.in_degree>20)ev.push(`<strong>Solid citation rate:</strong> ${p.in_degree} connections — well above network average.`);
+  if(history&&history.pagerank.length>=3){const r=history.pagerank[history.pagerank.length-1],o=history.pagerank[history.pagerank.length-3]||history.pagerank[0];const m=((r-o)/o*100).toFixed(1);if(parseFloat(m)>20)ev.push(`<strong>Multi-year growth:</strong> PageRank grew ${m}% over 3 years — sustained momentum.`);else if(parseFloat(m)>0)ev.push(`<strong>Consistent growth:</strong> PageRank increased ${m}% over multiple years.`);}
+  if(p.predicted_growth>0.15)ev.push(`<strong>XGBoost signal:</strong> Top features — avg neighbor PageRank, clustering coefficient, and current PageRank — all contribute strongly to a predicted score of ${(p.predicted_pagerank*10000).toFixed(3)} ×10⁻⁴.`);
+  else ev.push(`<strong>Model prediction:</strong> XGBoost forecasts 2027 PageRank of ${(p.predicted_pagerank*10000).toFixed(3)} ×10⁻⁴ based on current graph position.`);
+  if(ev.length<3)ev.push(`<strong>Network position:</strong> This topic occupies a strategically important position within the ${p.community_name} community.`);
+  return ev;
+}
+
+// ===== BOOT =====
+boot();
+</script>
+</body>
+</html>

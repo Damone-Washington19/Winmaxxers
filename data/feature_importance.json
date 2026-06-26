@@ -1,0 +1,115 @@
+{
+  "features": [
+    {
+      "rank": 1,
+      "feature_name": "avg_neighbor_pagerank",
+      "importance": 0.08709369,
+      "relative_importance": 0.08709369339665404
+    },
+    {
+      "rank": 2,
+      "feature_name": "clustering_coefficient",
+      "importance": 0.081151985,
+      "relative_importance": 0.08115198816492754
+    },
+    {
+      "rank": 3,
+      "feature_name": "pagerank_lag_1",
+      "importance": 0.0744843,
+      "relative_importance": 0.07448430290488782
+    },
+    {
+      "rank": 4,
+      "feature_name": "pagerank",
+      "importance": 0.06932964,
+      "relative_importance": 0.06932964270385607
+    },
+    {
+      "rank": 5,
+      "feature_name": "katz_centrality",
+      "importance": 0.0667507,
+      "relative_importance": 0.0667507026032774
+    },
+    {
+      "rank": 6,
+      "feature_name": "core_number",
+      "importance": 0.06493445,
+      "relative_importance": 0.06493445253244365
+    },
+    {
+      "rank": 7,
+      "feature_name": "avg_neighbor_degree",
+      "importance": 0.062467843,
+      "relative_importance": 0.06246784543624598
+    },
+    {
+      "rank": 8,
+      "feature_name": "community_size",
+      "importance": 0.06185529,
+      "relative_importance": 0.061855292412356405
+    },
+    {
+      "rank": 9,
+      "feature_name": "authority_score",
+      "importance": 0.06179478,
+      "relative_importance": 0.061794782409996515
+    },
+    {
+      "rank": 10,
+      "feature_name": "pagerank_lag_2",
+      "importance": 0.054679103,
+      "relative_importance": 0.0546791051324851
+    },
+    {
+      "rank": 11,
+      "feature_name": "closeness_centrality",
+      "importance": 0.0544354,
+      "relative_importance": 0.05443540212298068
+    },
+    {
+      "rank": 12,
+      "feature_name": "hub_score",
+      "importance": 0.052553948,
+      "relative_importance": 0.05255395004960405
+    },
+    {
+      "rank": 13,
+      "feature_name": "total_degree",
+      "importance": 0.050510876,
+      "relative_importance": 0.05051087796992425
+    },
+    {
+      "rank": 14,
+      "feature_name": "in_degree",
+      "importance": 0.046830393,
+      "relative_importance": 0.046830394826385395
+    },
+    {
+      "rank": 15,
+      "feature_name": "bridging_score",
+      "importance": 0.046482433,
+      "relative_importance": 0.04648243481281496
+    },
+    {
+      "rank": 16,
+      "feature_name": "betweenness_centrality",
+      "importance": 0.03278285,
+      "relative_importance": 0.0327828512785312
+    },
+    {
+      "rank": 17,
+      "feature_name": "out_degree",
+      "importance": 0.03186228,
+      "relative_importance": 0.03186228124262897
+    },
+    {
+      "rank": 18,
+      "feature_name": "eigenvector_centrality",
+      "importance": 0.0,
+      "relative_importance": 0.0
+    }
+  ],
+  "model_type": "XGBRegressor",
+  "target_variable": "pagerank_growth_clipped",
+  "description": "Feature importance for predicting topic growth"
+}
